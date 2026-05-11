@@ -119,6 +119,7 @@
       font-weight: 800;
       box-shadow: 0 10px 20px rgba(217,111,141,0.24);
       transition: 0.15s ease;
+      text-decoration: none;
     }
 
     .button:hover,
@@ -133,7 +134,6 @@
       box-shadow: 0 10px 20px rgba(99, 180, 161, 0.18);
     }
 
-    .ratio-grid,
     .preset-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -208,6 +208,37 @@
       margin-top: 30px;
     }
 
+    .selected-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+
+    .selected-item {
+      background: white;
+      border-radius: 18px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(158,96,112,0.08);
+    }
+
+    .selected-item img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 12px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .selected-item small {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-all;
+    }
+
     .preview-grid {
       margin-top: 24px;
       display: grid;
@@ -228,6 +259,7 @@
       border-radius: 16px;
       background: #f6f1f2;
       display: block;
+      margin-top: 10px;
     }
 
     .preview-card a {
@@ -345,6 +377,8 @@
 
       <p class="message" id="message">まずは画像を選んでください。</p>
 
+      <div class="selected-grid" id="selectedGrid"></div>
+
       <div class="preview-grid" id="previewGrid"></div>
     </section>
   </main>
@@ -354,6 +388,7 @@
     const convertBtn = document.getElementById('convertBtn');
     const clearBtn = document.getElementById('clearBtn');
     const previewGrid = document.getElementById('previewGrid');
+    const selectedGrid = document.getElementById('selectedGrid');
     const message = document.getElementById('message');
     const presetCards = document.querySelectorAll('.option-card');
     const customWidth = document.getElementById('customWidth');
@@ -365,8 +400,36 @@
     imageInput.addEventListener('change', (e) => {
       files = [...e.target.files];
 
+      selectedGrid.innerHTML = '';
+      previewGrid.innerHTML = '';
+
       if (files.length > 0) {
         message.textContent = `${files.length}枚の画像を選択しました。`;
+
+        files.forEach(file => {
+          if (!file.type.startsWith('image/')) return;
+
+          const reader = new FileReader();
+
+          reader.onload = (event) => {
+            const item = document.createElement('div');
+            item.className = 'selected-item';
+
+            const img = document.createElement('img');
+            img.src = event.target.result;
+            img.alt = file.name;
+
+            const name = document.createElement('small');
+            name.textContent = file.name;
+
+            item.appendChild(img);
+            item.appendChild(name);
+
+            selectedGrid.appendChild(item);
+          };
+
+          reader.readAsDataURL(file);
+        });
       } else {
         message.textContent = 'まずは画像を選んでください。';
       }
@@ -393,7 +456,14 @@
       const width = parseInt(customWidth.value);
       const height = parseInt(customHeight.value);
 
+      if (!width || !height || width <= 0 || height <= 0) {
+        message.textContent = '横幅と高さを正しい数字で入力してください。';
+        return;
+      }
+
       for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+
         const imageUrl = URL.createObjectURL(file);
         const img = new Image();
 
@@ -451,6 +521,7 @@
     clearBtn.addEventListener('click', () => {
       imageInput.value = '';
       files = [];
+      selectedGrid.innerHTML = '';
       previewGrid.innerHTML = '';
       message.textContent = 'リセットしました。';
     });
