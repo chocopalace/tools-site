@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>動画から写真メーカー｜動画の好きな場面を写真に保存</title>
-  <meta name="description" content="動画の好きな場面をかんたんに写真として保存できる無料ツールです。スマホでもパソコンでも使えます。" />
-
+  <title>ひとり広報のためのミニ便利ツール集｜木津川AIクラブ</title>
+  <meta name="description" content="個人事業主さん、小さなお店、地域活動をしている人のための、かんたんに使える無料ミニ便利ツール集です。運営：木津川AIクラブ" />
 
   <style>
     :root {
-      --bg: #fff8ef;
+      --bg: #fff7f5;
+      --bg-soft: #fffdf9;
       --card: #ffffff;
-      --main: #ff9f6e;
-      --main-dark: #e87945;
-      --accent: #8ed7c6;
-      --text: #3f342d;
-      --muted: #7d6f66;
-      --line: #f1dfd0;
-      --shadow: 0 16px 40px rgba(100, 72, 45, 0.12);
+      --main: #e98aa4;
+      --main-dark: #d96f8d;
+      --accent: #f6c98f;
+      --mint: #a9ddd2;
+      --text: #4a3a3a;
+      --muted: #826f70;
+      --line: #f1dadd;
+      --shadow: 0 18px 45px rgba(158, 96, 112, 0.14);
     }
 
     * {
@@ -27,32 +28,36 @@
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(255, 196, 142, 0.35), transparent 32%),
-        radial-gradient(circle at top right, rgba(142, 215, 198, 0.28), transparent 30%),
-        var(--bg);
       color: var(--text);
-      line-height: 1.7;
+      line-height: 1.75;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(246, 201, 143, 0.35), transparent 28%),
+        radial-gradient(circle at 86% 4%, rgba(169, 221, 210, 0.36), transparent 30%),
+        linear-gradient(180deg, #fff7f5 0%, #fffdf9 48%, #fff7f5 100%);
+    }
+
+    a {
+      color: inherit;
     }
 
     .page {
-      width: min(980px, 92%);
+      width: min(1080px, 92%);
       margin: 0 auto;
       padding: 28px 0 48px;
     }
 
     header {
       text-align: center;
-      padding: 28px 0 20px;
+      padding: 38px 0 28px;
     }
 
-    .badge {
+    .owner {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
+      gap: 8px;
+      padding: 7px 16px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.78);
       border: 1px solid var(--line);
       color: var(--muted);
       font-size: 14px;
@@ -60,209 +65,205 @@
     }
 
     h1 {
-      margin: 18px 0 10px;
-      font-size: clamp(32px, 7vw, 56px);
-      line-height: 1.15;
+      margin: 18px 0 14px;
+      font-size: clamp(34px, 7vw, 62px);
+      line-height: 1.17;
       letter-spacing: 0.02em;
     }
 
+    .highlight {
+      background: linear-gradient(transparent 62%, rgba(246, 201, 143, 0.55) 62%);
+    }
+
     .lead {
+      max-width: 760px;
       margin: 0 auto;
-      max-width: 680px;
       color: var(--muted);
-      font-size: clamp(16px, 3vw, 19px);
+      font-size: clamp(16px, 2.5vw, 19px);
     }
 
-    .steps {
+    .intro-card {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin: 26px 0;
-    }
-
-    .step {
-      background: rgba(255, 255, 255, 0.78);
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 22px;
+      align-items: center;
+      margin: 22px 0 30px;
+      padding: clamp(20px, 4vw, 34px);
+      border-radius: 32px;
+      background: rgba(255, 255, 255, 0.82);
       border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 16px;
-      text-align: center;
-      box-shadow: 0 8px 20px rgba(100, 72, 45, 0.06);
-    }
-
-    .step span {
-      display: inline-grid;
-      place-items: center;
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: var(--accent);
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
-
-    .app-card {
-      background: rgba(255, 255, 255, 0.9);
-      border: 1px solid var(--line);
-      border-radius: 30px;
-      padding: clamp(18px, 4vw, 34px);
       box-shadow: var(--shadow);
     }
 
-    .upload-area {
-      border: 2px dashed #f0bf9d;
-      background: #fffaf5;
-      border-radius: 24px;
-      padding: 26px;
-      text-align: center;
-      margin-bottom: 20px;
+    .intro-card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(24px, 4vw, 34px);
+      line-height: 1.35;
     }
 
-    .upload-area p {
-      margin: 8px 0 0;
+    .intro-card p {
+      margin: 0;
       color: var(--muted);
-      font-size: 14px;
     }
 
-    input[type="file"] {
-      display: none;
+    .mini-points {
+      display: grid;
+      gap: 10px;
     }
 
-    .button,
-    .file-label {
+    .point {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: #fff7fb;
+      border: 1px solid var(--line);
+      font-weight: 700;
+      color: #6d5558;
+    }
+
+    .section-title {
+      text-align: center;
+      margin: 38px 0 18px;
+    }
+
+    .section-title h2 {
+      margin: 0 0 6px;
+      font-size: clamp(26px, 4vw, 38px);
+    }
+
+    .section-title p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .tool-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 290px;
+      padding: 24px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--line);
+      text-decoration: none;
+      box-shadow: 0 12px 30px rgba(158, 96, 112, 0.1);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      overflow: hidden;
+    }
+
+    .tool-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 42px rgba(158, 96, 112, 0.18);
+    }
+
+    .tool-card::after {
+      content: "";
+      position: absolute;
+      right: -36px;
+      top: -36px;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: rgba(233, 138, 164, 0.12);
+    }
+
+    .icon {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: #fff1f5;
+      font-size: 30px;
+      margin-bottom: 18px;
+    }
+
+    .tool-card h3 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      line-height: 1.35;
+    }
+
+    .tool-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .tag {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #fff7f0;
+      border: 1px solid #f4dfc7;
+      color: #8a6651;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .open-button {
+      margin-top: 18px;
       display: inline-flex;
       justify-content: center;
       align-items: center;
-      gap: 8px;
-      min-height: 50px;
-      padding: 12px 22px;
-      border: 0;
+      min-height: 44px;
+      padding: 10px 16px;
       border-radius: 999px;
       background: var(--main);
       color: #fff;
-      font-size: 16px;
       font-weight: 800;
-      text-decoration: none;
-      cursor: pointer;
-      box-shadow: 0 10px 20px rgba(232, 121, 69, 0.25);
-      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 10px 20px rgba(217, 111, 141, 0.22);
     }
 
-    .button:hover,
-    .file-label:hover {
-      transform: translateY(-1px);
-      background: var(--main-dark);
-      box-shadow: 0 12px 24px rgba(232, 121, 69, 0.32);
+    .coming-soon {
+      opacity: 0.72;
+      cursor: default;
     }
 
-    .button.secondary {
-      background: var(--accent);
-      color: #25413b;
-      box-shadow: 0 10px 20px rgba(82, 168, 147, 0.2);
+    .coming-soon .open-button {
+      background: #d9c8cd;
+      box-shadow: none;
     }
 
-    .button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .video-wrap,
-    .photo-wrap {
-      margin-top: 18px;
-    }
-
-    video,
-    canvas {
-      width: 100%;
-      max-height: 560px;
-      border-radius: 24px;
-      background: #2b2521;
-      display: block;
-    }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      justify-content: center;
-      margin: 20px 0 8px;
-    }
-
-    .message {
-      text-align: center;
-      color: var(--muted);
-      min-height: 28px;
-      margin: 8px 0 0;
-    }
-
-    .photo-box {
-      display: none;
-      margin-top: 28px;
-      padding-top: 24px;
-      border-top: 1px solid var(--line);
-    }
-
-    .photo-box h2 {
-      margin: 0 0 12px;
-      font-size: 22px;
-      text-align: center;
-    }
-
-    .note {
-      margin: 26px auto 0;
-      max-width: 760px;
-      background: rgba(255, 255, 255, 0.72);
+    .message-box {
+      margin: 32px auto 0;
+      max-width: 850px;
+      padding: 22px 24px;
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.76);
       border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px 20px;
       color: var(--muted);
-      font-size: 14px;
     }
 
-    .ad-section {
-      margin: 34px auto 0;
-      max-width: 760px;
-      text-align: center;
-    }
-
-    .ad-label {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-
-    .ad-box {
-      min-height: 120px;
-      border-radius: 18px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.62);
-      display: grid;
-      place-items: center;
-      color: #b8a79b;
-      font-size: 14px;
-      overflow: hidden;
+    .message-box strong {
+      color: var(--text);
     }
 
     footer {
       text-align: center;
+      padding: 34px 0 0;
       color: var(--muted);
       font-size: 13px;
-      padding: 28px 0 0;
     }
 
-    @media (max-width: 720px) {
-      .steps {
+    @media (max-width: 860px) {
+      .intro-card {
         grid-template-columns: 1fr;
       }
 
-      .actions {
-        flex-direction: column;
-      }
-
-      .button,
-      .file-label {
-        width: 100%;
+      .tools-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -270,140 +271,88 @@
 <body>
   <main class="page">
     <header>
-      <div class="badge">無料・登録なしで使えます</div>
-      <h1>動画から写真メーカー</h1>
-      <p class="lead">動画の中の「この瞬間！」を、かんたんに写真として保存できます。スマホでもパソコンでもOKです。</p>
+      <div class="owner">🌿 運営：木津川AIクラブ</div>
+      <h1><span class="highlight">ひとり広報</span>のための<br />ミニ便利ツール集</h1>
+      <p class="lead">
+        個人事業主さん、小さなお店、地域活動をしている人のための、
+        かんたんに使える無料ツールを集めました。
+      </p>
     </header>
 
-    <section class="steps" aria-label="使い方">
-      <div class="step"><span>1</span><br />動画をえらぶ</div>
-      <div class="step"><span>2</span><br />好きな場面で止める</div>
-      <div class="step"><span>3</span><br />写真にして保存</div>
+    <section class="intro-card">
+      <div>
+        <h2>むずかしいことは、少しだけラクに。</h2>
+        <p>
+          SNS投稿、チラシづくり、動画の切り出し、ちょっとした画像づくり。
+          「誰かに頼むほどではないけど、自分でやるには少し面倒」な作業を、
+          なるべくやさしく、迷わず使える形にしていきます。
+        </p>
+      </div>
+      <div class="mini-points">
+        <div class="point">💻 登録なしで使える</div>
+        <div class="point">🌸 スマホでも使いやすい</div>
+        <div class="point">✨ ひとり作業の味方</div>
+      </div>
     </section>
 
-    <section class="app-card">
-      <div class="upload-area">
-        <label class="file-label" for="videoInput">?? 動画をえらぶ</label>
-        <input id="videoInput" type="file" accept="video/*" />
-        <p>選んだ動画はこのページの中だけで使われます。アップロードはされません。</p>
-      </div>
+    <section class="section-title">
+      <h2>使えるツール</h2>
+      <p>まずは1つ。これから少しずつ増やしていきます。</p>
+    </section>
 
-      <div class="video-wrap">
-        <video id="video" controls playsinline></video>
-      </div>
-
-      <div class="actions">
-        <button id="captureBtn" class="button" disabled>この場面を写真にする</button>
-        <button id="resetBtn" class="button secondary" disabled>別の動画をえらぶ</button>
-      </div>
-
-      <p id="message" class="message">まずは動画をえらんでください。</p>
-
-      <div id="photoBox" class="photo-box">
-        <h2>できあがり！</h2>
-        <canvas id="canvas"></canvas>
-        <div class="actions">
-          <a id="downloadLink" class="button" download="video-photo.png">写真を保存する</a>
-          <button id="anotherBtn" class="button secondary">もう一枚つくる</button>
+    <section class="tools-grid" aria-label="ミニ便利ツール一覧">
+      <a class="tool-card" href="./video-photo/">
+        <div class="icon">📸</div>
+        <h3>動画から写真メーカー</h3>
+        <p>
+          動画の中の「この瞬間！」を、写真として保存できます。
+          イベント動画、演奏動画、商品紹介動画から、使いやすい一枚を取り出したい時に便利です。
+        </p>
+        <div class="tags">
+          <span class="tag">動画</span>
+          <span class="tag">写真切り出し</span>
+          <span class="tag">SNS素材</span>
         </div>
+        <div class="open-button">使ってみる →</div>
+      </a>
+
+      <div class="tool-card coming-soon" aria-label="準備中のツール">
+        <div class="icon">📝</div>
+        <h3>SNS投稿文メーカー</h3>
+        <p>
+          告知文やお知らせ文を、やさしい雰囲気で整えるツールを準備中です。
+        </p>
+        <div class="tags">
+          <span class="tag">準備中</span>
+          <span class="tag">SNS</span>
+        </div>
+        <div class="open-button">Coming soon</div>
+      </div>
+
+      <div class="tool-card coming-soon" aria-label="準備中のツール">
+        <div class="icon">🎨</div>
+        <h3>チラシ文言サポート</h3>
+        <p>
+          イベントや講座のチラシに使う文章を、わかりやすく整えるツールを準備中です。
+        </p>
+        <div class="tags">
+          <span class="tag">準備中</span>
+          <span class="tag">広報</span>
+        </div>
+        <div class="open-button">Coming soon</div>
       </div>
     </section>
 
-    <section class="note">
-      <strong>使い方のコツ：</strong><br />
-      動画を再生して、写真にしたいところで一時停止します。そのあと「この場面を写真にする」を押してください。保存される画像はPNG形式です。
+    <section class="message-box">
+      <strong>このサイトについて</strong><br />
+      このサイトは、木津川AIクラブが運営しています。
+      AIやWebが得意ではない方でも「これならできそう」と思えるように、
+      小さくて使いやすい便利ツールを少しずつ追加していきます。
     </section>
 
     <footer>
-      c 動画から写真メーカー
+      © ひとり広報のためのミニ便利ツール集｜運営：木津川AIクラブ
     </footer>
   </main>
-
-  <script>
-    const videoInput = document.getElementById('videoInput');
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const captureBtn = document.getElementById('captureBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const anotherBtn = document.getElementById('anotherBtn');
-    const downloadLink = document.getElementById('downloadLink');
-    const photoBox = document.getElementById('photoBox');
-    const message = document.getElementById('message');
-
-    let currentVideoUrl = null;
-
-    videoInput.addEventListener('change', () => {
-      const file = videoInput.files[0];
-      if (!file) return;
-
-      if (!file.type.startsWith('video/')) {
-        message.textContent = '動画ファイルをえらんでください。';
-        return;
-      }
-
-      if (currentVideoUrl) {
-        URL.revokeObjectURL(currentVideoUrl);
-      }
-
-      currentVideoUrl = URL.createObjectURL(file);
-      video.src = currentVideoUrl;
-      video.load();
-
-      captureBtn.disabled = false;
-      resetBtn.disabled = false;
-      photoBox.style.display = 'none';
-      message.textContent = '好きな場面で動画を止めて、写真にしてみましょう。';
-    });
-
-    captureBtn.addEventListener('click', () => {
-      if (!video.src || video.readyState < 2) {
-        message.textContent = '動画の読み込みが終わってから押してください。';
-        return;
-      }
-
-      const width = video.videoWidth;
-      const height = video.videoHeight;
-
-      if (!width || !height) {
-        message.textContent = 'この動画から画像サイズを読み取れませんでした。';
-        return;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, width, height);
-
-      const imageUrl = canvas.toDataURL('image/png');
-      downloadLink.href = imageUrl;
-      photoBox.style.display = 'block';
-      message.textContent = '写真ができました！下のボタンから保存できます。';
-      photoBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-
-    anotherBtn.addEventListener('click', () => {
-      photoBox.style.display = 'none';
-      message.textContent = '動画を少し進めたり戻したりして、もう一度写真にできます。';
-      video.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-
-    resetBtn.addEventListener('click', () => {
-      videoInput.value = '';
-      video.removeAttribute('src');
-      video.load();
-      canvas.width = 0;
-      canvas.height = 0;
-      captureBtn.disabled = true;
-      resetBtn.disabled = true;
-      photoBox.style.display = 'none';
-      message.textContent = 'まずは動画をえらんでください。';
-
-      if (currentVideoUrl) {
-        URL.revokeObjectURL(currentVideoUrl);
-        currentVideoUrl = null;
-      }
-    });
-  </script>
 </body>
 </html>
