@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>動画から写真メーカー｜動画の好きな場面を写真に保存</title>
+  <meta name="description" content="動画の好きな場面をかんたんに写真として保存できる無料ツールです。スマホでもパソコンでも使えます。" />
+
+  <!-- Google AdSenseを使う場合は、下の ca-pub-xxxxxxxxxxxxxxxx を自分のIDに変更してください -->
+  <!--
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+  -->
+
+  <style>
+    :root {
+      --bg: #fff8ef;
+      --card: #ffffff;
+      --main: #ff9f6e;
+      --main-dark: #e87945;
+      --accent: #8ed7c6;
+      --text: #3f342d;
+      --muted: #7d6f66;
+      --line: #f1dfd0;
+      --shadow: 0 16px 40px rgba(100, 72, 45, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 196, 142, 0.35), transparent 32%),
+        radial-gradient(circle at top right, rgba(142, 215, 198, 0.28), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(980px, 92%);
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      text-align: center;
+      padding: 28px 0 20px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(32px, 7vw, 56px);
+      line-height: 1.15;
+      letter-spacing: 0.02em;
+    }
+
+    .lead {
+      margin: 0 auto;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: clamp(16px, 3vw, 19px);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 26px 0;
+    }
+
+    .step {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(100, 72, 45, 0.06);
+    }
+
+    .step span {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--accent);
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .app-card {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      padding: clamp(18px, 4vw, 34px);
+      box-shadow: var(--shadow);
+    }
+
+    .upload-area {
+      border: 2px dashed #f0bf9d;
+      background: #fffaf5;
+      border-radius: 24px;
+      padding: 26px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .upload-area p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .button,
+    .file-label {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      min-height: 50px;
+      padding: 12px 22px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--main);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(232, 121, 69, 0.25);
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .button:hover,
+    .file-label:hover {
+      transform: translateY(-1px);
+      background: var(--main-dark);
+      box-shadow: 0 12px 24px rgba(232, 121, 69, 0.32);
+    }
+
+    .button.secondary {
+      background: var(--accent);
+      color: #25413b;
+      box-shadow: 0 10px 20px rgba(82, 168, 147, 0.2);
+    }
+
+    .button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .video-wrap,
+    .photo-wrap {
+      margin-top: 18px;
+    }
+
+    video,
+    canvas {
+      width: 100%;
+      max-height: 560px;
+      border-radius: 24px;
+      background: #2b2521;
+      display: block;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0 8px;
+    }
+
+    .message {
+      text-align: center;
+      color: var(--muted);
+      min-height: 28px;
+      margin: 8px 0 0;
+    }
+
+    .photo-box {
+      display: none;
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+
+    .photo-box h2 {
+      margin: 0 0 12px;
+      font-size: 22px;
+      text-align: center;
+    }
+
+    .note {
+      margin: 26px auto 0;
+      max-width: 760px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .ad-section {
+      margin: 34px auto 0;
+      max-width: 760px;
+      text-align: center;
+    }
+
+    .ad-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .ad-box {
+      min-height: 120px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.62);
+      display: grid;
+      place-items: center;
+      color: #b8a79b;
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 28px 0 0;
+    }
+
+    @media (max-width: 720px) {
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .button,
+      .file-label {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="badge">📸 無料・登録なしで使えます</div>
+      <h1>動画から写真メーカー</h1>
+      <p class="lead">動画の中の「この瞬間！」を、かんたんに写真として保存できます。スマホでもパソコンでもOKです。</p>
+    </header>
+
+    <section class="steps" aria-label="使い方">
+      <div class="step"><span>1</span><br />動画をえらぶ</div>
+      <div class="step"><span>2</span><br />好きな場面で止める</div>
+      <div class="step"><span>3</span><br />写真にして保存</div>
+    </section>
+
+    <section class="app-card">
+      <div class="upload-area">
+        <label class="file-label" for="videoInput">🎬 動画をえらぶ</label>
+        <input id="videoInput" type="file" accept="video/*" />
+        <p>選んだ動画はこのページの中だけで使われます。アップロードはされません。</p>
+      </div>
+
+      <div class="video-wrap">
+        <video id="video" controls playsinline></video>
+      </div>
+
+      <div class="actions">
+        <button id="captureBtn" class="button" disabled>📸 この場面を写真にする</button>
+        <button id="resetBtn" class="button secondary" disabled>🔄 別の動画をえらぶ</button>
+      </div>
+
+      <p id="message" class="message">まずは動画をえらんでください。</p>
+
+      <div id="photoBox" class="photo-box">
+        <h2>できあがり！</h2>
+        <canvas id="canvas"></canvas>
+        <div class="actions">
+          <a id="downloadLink" class="button" download="video-photo.png">💾 写真を保存する</a>
+          <button id="anotherBtn" class="button secondary">📸 もう一枚つくる</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="note">
+      <strong>使い方のコツ：</strong><br />
+      動画を再生して、写真にしたいところで一時停止します。そのあと「この場面を写真にする」を押してください。保存される画像はPNG形式です。
+    </section>
+
+    <section class="ad-section" aria-label="広告エリア">
+      <div class="ad-label">スポンサーリンク</div>
+      <div class="ad-box">
+        <!-- AdSense広告を入れる場所です。審査後にGoogle AdSenseの広告コードへ差し替えてください。 -->
+        <!--
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0000000000"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+        -->
+        広告スペース
+      </div>
+    </section>
+
+    <footer>
+      © 動画から写真メーカー
+    </footer>
+  </main>
+
+  <script>
+    const videoInput = document.getElementById('videoInput');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('captureBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const anotherBtn = document.getElementById('anotherBtn');
+    const downloadLink = document.getElementById('downloadLink');
+    const photoBox = document.getElementById('photoBox');
+    const message = document.getElementById('message');
+
+    let currentVideoUrl = null;
+
+    videoInput.addEventListener('change', () => {
+      const file = videoInput.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('video/')) {
+        message.textContent = '動画ファイルをえらんでください。';
+        return;
+      }
+
+      if (currentVideoUrl) {
+        URL.revokeObjectURL(currentVideoUrl);
+      }
+
+      currentVideoUrl = URL.createObjectURL(file);
+      video.src = currentVideoUrl;
+      video.load();
+
+      captureBtn.disabled = false;
+      resetBtn.disabled = false;
+      photoBox.style.display = 'none';
+      message.textContent = '好きな場面で動画を止めて、写真にしてみましょう。';
+    });
+
+    captureBtn.addEventListener('click', () => {
+      if (!video.src || video.readyState < 2) {
+        message.textContent = '動画の読み込みが終わってから押してください。';
+        return;
+      }
+
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+
+      if (!width || !height) {
+        message.textContent = 'この動画から画像サイズを読み取れませんでした。';
+        return;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, width, height);
+
+      const imageUrl = canvas.toDataURL('image/png');
+      downloadLink.href = imageUrl;
+      photoBox.style.display = 'block';
+      message.textContent = '写真ができました！下のボタンから保存できます。';
+      photoBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    anotherBtn.addEventListener('click', () => {
+      photoBox.style.display = 'none';
+      message.textContent = '動画を少し進めたり戻したりして、もう一度写真にできます。';
+      video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    resetBtn.addEventListener('click', () => {
+      videoInput.value = '';
+      video.removeAttribute('src');
+      video.load();
+      canvas.width = 0;
+      canvas.height = 0;
+      captureBtn.disabled = true;
+      resetBtn.disabled = true;
+      photoBox.style.display = 'none';
+      message.textContent = 'まずは動画をえらんでください。';
+
+      if (currentVideoUrl) {
+        URL.revokeObjectURL(currentVideoUrl);
+        currentVideoUrl = null;
+      }
+    });
+  </script>
+</body>
+</html>
