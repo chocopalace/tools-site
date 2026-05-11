@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>画像サイズそろえるくん｜ひとり広報のためのミニ便利ツール</title>
+  <meta name="description" content="複数画像の縦横比やサイズをまとめて変換できる無料ツールです。Instagram・ストーリー・YouTubeなどのSNSサイズに対応。" />
+
+  <style>
+    :root {
+      --bg: #fff7f5;
+      --card: #ffffff;
+      --main: #e98aa4;
+      --main-dark: #d96f8d;
+      --accent: #f6c98f;
+      --mint: #a9ddd2;
+      --line: #f1dadd;
+      --text: #4a3a3a;
+      --muted: #7e6a6d;
+      --shadow: 0 16px 40px rgba(158, 96, 112, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(246, 201, 143, 0.35), transparent 28%),
+        radial-gradient(circle at top right, rgba(169, 221, 210, 0.34), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(1100px, 92%);
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 0 20px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(34px, 7vw, 58px);
+      line-height: 1.15;
+    }
+
+    .lead {
+      max-width: 760px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: clamp(16px, 2.5vw, 19px);
+    }
+
+    .card {
+      margin-top: 26px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      padding: clamp(18px, 4vw, 34px);
+      box-shadow: var(--shadow);
+    }
+
+    .step {
+      margin-bottom: 30px;
+    }
+
+    .step h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+    }
+
+    .upload-box {
+      border: 2px dashed #f0bfd0;
+      background: #fffafc;
+      border-radius: 24px;
+      padding: 28px;
+      text-align: center;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .button,
+    .upload-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 50px;
+      padding: 12px 22px;
+      border-radius: 999px;
+      border: 0;
+      cursor: pointer;
+      background: var(--main);
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      box-shadow: 0 10px 20px rgba(217,111,141,0.24);
+      transition: 0.15s ease;
+    }
+
+    .button:hover,
+    .upload-label:hover {
+      background: var(--main-dark);
+      transform: translateY(-1px);
+    }
+
+    .button.secondary {
+      background: var(--mint);
+      color: #2c4942;
+      box-shadow: 0 10px 20px rgba(99, 180, 161, 0.18);
+    }
+
+    .ratio-grid,
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+
+    .option-card {
+      position: relative;
+      border: 2px solid var(--line);
+      background: white;
+      border-radius: 20px;
+      padding: 16px;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .option-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .option-card.active {
+      border-color: var(--main);
+      background: #fff5f8;
+    }
+
+    .option-card strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 16px;
+    }
+
+    .option-card small {
+      color: var(--muted);
+    }
+
+    .custom-size {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .field {
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .field input,
+    select {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      font-size: 16px;
+      background: white;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .preview-grid {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .preview-card {
+      background: white;
+      border-radius: 24px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 24px rgba(158,96,112,0.08);
+    }
+
+    .preview-card canvas {
+      width: 100%;
+      border-radius: 16px;
+      background: #f6f1f2;
+      display: block;
+    }
+
+    .preview-card a {
+      display: inline-flex;
+      margin-top: 12px;
+      text-decoration: none;
+    }
+
+    .message {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 18px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      margin-top: 18px;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    @media (max-width: 720px) {
+      .actions {
+        flex-direction: column;
+      }
+
+      .button,
+      .upload-label {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="badge">🖼️ SNS投稿サイズにまとめて変換</div>
+      <h1>画像サイズそろえるくん</h1>
+      <p class="lead">
+        複数画像のサイズや縦横比を、まとめてかんたん変換。
+        Instagram、ストーリー、チラシ、YouTube用など、よく使うサイズにすぐ合わせられます。
+      </p>
+      <a class="back-link" href="../">← ツール一覧にもどる</a>
+    </header>
+
+    <section class="card">
+      <div class="step">
+        <h2>① 画像をまとめて選ぶ</h2>
+        <div class="upload-box">
+          <label class="upload-label" for="imageInput">📂 画像をえらぶ</label>
+          <input id="imageInput" type="file" accept="image/*" multiple />
+          <p class="message">複数枚まとめて選べます。画像はアップロードされません。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>② SNSサイズを選ぶ</h2>
+        <div class="preset-grid" id="presetGrid">
+          <div class="option-card active" data-width="1080" data-height="1080">
+            <strong>Instagram正方形</strong>
+            <small>1:1 / 1080×1080</small>
+          </div>
+
+          <div class="option-card" data-width="1080" data-height="1350">
+            <strong>Instagram縦投稿</strong>
+            <small>4:5 / 1080×1350</small>
+          </div>
+
+          <div class="option-card" data-width="1080" data-height="1920">
+            <strong>ストーリー・リール</strong>
+            <small>9:16 / 1080×1920</small>
+          </div>
+
+          <div class="option-card" data-width="1280" data-height="720">
+            <strong>YouTubeサムネ</strong>
+            <small>16:9 / 1280×720</small>
+          </div>
+
+          <div class="option-card" data-width="1080" data-height="1440">
+            <strong>チラシ向け縦長</strong>
+            <small>3:4 / 1080×1440</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>③ サイズを細かく調整したい場合</h2>
+
+        <div class="custom-size">
+          <div class="field">
+            <label for="customWidth">横幅（px）</label>
+            <input type="number" id="customWidth" value="1080" />
+          </div>
+
+          <div class="field">
+            <label for="customHeight">高さ（px）</label>
+            <input type="number" id="customHeight" value="1080" />
+          </div>
+
+          <div class="field">
+            <label for="fitMode">仕上げ方法</label>
+            <select id="fitMode">
+              <option value="contain">余白をつけて全部入れる</option>
+              <option value="cover">はみ出す部分を切り取る</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="button" id="convertBtn">✨ まとめて変換する</button>
+        <button class="button secondary" id="clearBtn">🧹 リセット</button>
+      </div>
+
+      <p class="message" id="message">まずは画像を選んでください。</p>
+
+      <div class="preview-grid" id="previewGrid"></div>
+    </section>
+  </main>
+
+  <script>
+    const imageInput = document.getElementById('imageInput');
+    const convertBtn = document.getElementById('convertBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const previewGrid = document.getElementById('previewGrid');
+    const message = document.getElementById('message');
+    const presetCards = document.querySelectorAll('.option-card');
+    const customWidth = document.getElementById('customWidth');
+    const customHeight = document.getElementById('customHeight');
+    const fitMode = document.getElementById('fitMode');
+
+    let files = [];
+
+    imageInput.addEventListener('change', (e) => {
+      files = [...e.target.files];
+
+      if (files.length > 0) {
+        message.textContent = `${files.length}枚の画像を選択しました。`;
+      } else {
+        message.textContent = 'まずは画像を選んでください。';
+      }
+    });
+
+    presetCards.forEach(card => {
+      card.addEventListener('click', () => {
+        presetCards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+
+        customWidth.value = card.dataset.width;
+        customHeight.value = card.dataset.height;
+      });
+    });
+
+    convertBtn.addEventListener('click', async () => {
+      if (files.length === 0) {
+        message.textContent = '画像を選んでください。';
+        return;
+      }
+
+      previewGrid.innerHTML = '';
+
+      const width = parseInt(customWidth.value);
+      const height = parseInt(customHeight.value);
+
+      for (const file of files) {
+        const imageUrl = URL.createObjectURL(file);
+        const img = new Image();
+
+        await new Promise(resolve => {
+          img.onload = resolve;
+          img.src = imageUrl;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        const scaleContain = Math.min(width / img.width, height / img.height);
+        const scaleCover = Math.max(width / img.width, height / img.height);
+
+        const scale = fitMode.value === 'cover' ? scaleCover : scaleContain;
+
+        const drawWidth = img.width * scale;
+        const drawHeight = img.height * scale;
+
+        const x = (width - drawWidth) / 2;
+        const y = (height - drawHeight) / 2;
+
+        ctx.drawImage(img, x, y, drawWidth, drawHeight);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'preview-card';
+
+        const title = document.createElement('strong');
+        title.textContent = file.name;
+
+        const link = document.createElement('a');
+        link.className = 'button';
+        link.textContent = '💾 保存する';
+        link.download = `resized-${file.name.replace(/\.[^/.]+$/, '')}.png`;
+        link.href = canvas.toDataURL('image/png');
+
+        wrapper.appendChild(title);
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(link);
+
+        previewGrid.appendChild(wrapper);
+
+        URL.revokeObjectURL(imageUrl);
+      }
+
+      message.textContent = '変換できました！保存ボタンからダウンロードできます。';
+    });
+
+    clearBtn.addEventListener('click', () => {
+      imageInput.value = '';
+      files = [];
+      previewGrid.innerHTML = '';
+      message.textContent = 'リセットしました。';
+    });
+  </script>
+</body>
+</html>
