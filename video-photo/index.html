@@ -274,7 +274,7 @@
 <body>
   <main class="page">
     <header>
-      <div class="badge">📸 無料・登録なしで使えます</div>
+      <div class="badge">無料・登録なしで使えます</div>
       <h1>動画から写真メーカー</h1>
       <p class="lead">動画の中の「この瞬間！」を、かんたんに写真として保存できます。スマホでもパソコンでもOKです。</p>
     </header>
@@ -287,7 +287,7 @@
 
     <section class="app-card">
       <div class="upload-area">
-        <label class="file-label" for="videoInput">🎬 動画をえらぶ</label>
+        <label class="file-label" for="videoInput">動画をえらぶ</label>
         <input id="videoInput" type="file" accept="video/*" />
         <p>選んだ動画はこのページの中だけで使われます。アップロードはされません。</p>
       </div>
@@ -297,8 +297,8 @@
       </div>
 
       <div class="actions">
-        <button id="captureBtn" class="button" disabled>📸 この場面を写真にする</button>
-        <button id="resetBtn" class="button secondary" disabled>🔄 別の動画をえらぶ</button>
+        <button id="captureBtn" class="button" disabled>この場面を写真にする</button>
+        <button id="resetBtn" class="button secondary" disabled>別の動画をえらぶ</button>
       </div>
 
       <p id="message" class="message">まずは動画をえらんでください。</p>
@@ -307,33 +307,9 @@
         <h2>できあがり！</h2>
         <canvas id="canvas"></canvas>
         <div class="actions">
-          <a id="downloadLink" class="button" download="video-photo.png">💾 写真を保存する</a>
-          <button id="anotherBtn" class="button secondary">📸 もう一枚つくる</button>
+          <a id="downloadLink" class="button" download="video-photo.png">写真を保存する</a>
+          <button id="anotherBtn" class="button secondary">もう一枚つくる</button>
         </div>
-      </div>
-    </section>
-
-    <section class="note">
-      <strong>使い方のコツ：</strong><br />
-      動画を再生して、写真にしたいところで一時停止します。そのあと「この場面を写真にする」を押してください。保存される画像はPNG形式です。
-    </section>
-
-    <section class="ad-section" aria-label="広告エリア">
-      <div class="ad-label">スポンサーリンク</div>
-      <div class="ad-box">
-        <!-- AdSense広告を入れる場所です。審査後にGoogle AdSenseの広告コードへ差し替えてください。 -->
-        <!--
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
-             data-ad-slot="0000000000"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-        -->
-        広告スペース
       </div>
     </section>
 
