@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SNS写真チェックさん｜ひとり広報のためのミニ便利ツール</title>
+  <meta name="description" content="SNSに載せる前の写真を、顔・名札・車のナンバー・背景などの観点で確認できる無料チェックツールです。" />
+
+  <style>
+    :root {
+      --bg: #fff7f5;
+      --card: #ffffff;
+      --main: #e98aa4;
+      --main-dark: #d96f8d;
+      --accent: #f6c98f;
+      --mint: #a9ddd2;
+      --line: #f1dadd;
+      --text: #4a3a3a;
+      --muted: #7e6a6d;
+      --ok: #4b9b7b;
+      --warn: #d3832b;
+      --danger: #c85d6f;
+      --shadow: 0 16px 40px rgba(158, 96, 112, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      line-height: 1.7;
+      background:
+        radial-gradient(circle at top left, rgba(246, 201, 143, 0.35), transparent 28%),
+        radial-gradient(circle at top right, rgba(169, 221, 210, 0.34), transparent 30%),
+        var(--bg);
+    }
+
+    .page {
+      width: min(1120px, 92%);
+      margin: 0 auto;
+      padding: 28px 0 50px;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 0 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(34px, 7vw, 58px);
+      line-height: 1.15;
+    }
+
+    .lead {
+      max-width: 760px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: clamp(16px, 2.5vw, 19px);
+    }
+
+    .back-link {
+      display: inline-flex;
+      margin-top: 18px;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .card {
+      margin-top: 26px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      padding: clamp(18px, 4vw, 34px);
+      box-shadow: var(--shadow);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .upload-box {
+      border: 2px dashed #f0bfd0;
+      background: #fffafc;
+      border-radius: 24px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    input[type="file"] { display: none; }
+
+    .button,
+    .upload-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 50px;
+      padding: 12px 22px;
+      border-radius: 999px;
+      border: 0;
+      cursor: pointer;
+      background: var(--main);
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 10px 20px rgba(217,111,141,0.24);
+      transition: 0.15s ease;
+    }
+
+    .button:hover,
+    .upload-label:hover {
+      background: var(--main-dark);
+      transform: translateY(-1px);
+    }
+
+    .button.secondary {
+      background: var(--mint);
+      color: #2c4942;
+      box-shadow: 0 10px 20px rgba(99, 180, 161, 0.18);
+    }
+
+    .preview-area {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 14px;
+      min-height: 280px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      overflow: hidden;
+    }
+
+    .preview-area img {
+      max-width: 100%;
+      max-height: 520px;
+      border-radius: 18px;
+      display: block;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 12px 0 0;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+    }
+
+    .check-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .check-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 18px;
+      background: white;
+      border: 1px solid var(--line);
+      cursor: pointer;
+    }
+
+    .check-item input {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--main);
+      margin-top: 4px;
+    }
+
+    .check-item strong {
+      display: block;
+      font-size: 16px;
+    }
+
+    .check-item span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .result-box {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 24px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .score {
+      font-size: 26px;
+      font-weight: 900;
+      margin: 0 0 8px;
+    }
+
+    .score.ok { color: var(--ok); }
+    .score.warn { color: var(--warn); }
+    .score.danger { color: var(--danger); }
+
+    .result-text {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .copy-area {
+      width: 100%;
+      min-height: 120px;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fffdfd;
+      resize: vertical;
+    }
+
+    .note {
+      margin-top: 24px;
+      padding: 18px 20px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+      .button, .upload-label { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="badge">🔍 投稿前のうっかり防止チェック</div>
+      <h1>SNS写真チェックさん</h1>
+      <p class="lead">
+        SNSに写真を載せる前に、顔・名札・車のナンバー・背景などをサッと確認。
+        イベント運営や地域活動の「うっかり写り込み」対策に使えます。
+      </p>
+      <a class="back-link" href="../">← ツール一覧にもどる</a>
+    </header>
+
+    <section class="card">
+      <div class="layout">
+        <div>
+          <div class="upload-box">
+            <label class="upload-label" for="photoInput">📂 写真をえらぶ</label>
+            <input id="photoInput" type="file" accept="image/*" />
+            <p class="hint">写真はアップロードされません。このページの中だけで表示します。</p>
+          </div>
+
+          <div class="preview-area" id="previewArea">
+            ここに写真が表示されます
+          </div>
+
+          <div class="note">
+            <strong>使い方：</strong><br />
+            写真を見ながら「気になる項目」にチェックを入れてください。
+            チェックが多いほど、投稿前にぼかし・トリミング・掲載許可確認などをおすすめします。
+          </div>
+        </div>
+
+        <div>
+          <h2>チェック項目</h2>
+
+          <div class="check-list" id="checkList">
+            <label class="check-item">
+              <input type="checkbox" value="子どもや参加者の顔がはっきり写っている" />
+              <div>
+                <strong>顔がはっきり写っている</strong>
+                <span>子ども・参加者・お客様の顔が大きく写っている場合は注意。</span>
+              </div>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" value="名札・学校名・園名・会社名などが読める" />
+              <div>
+                <strong>名札や所属が読める</strong>
+                <span>名札、制服、学校名、会社名、団体名などの写り込み。</span>
+              </div>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" value="車のナンバーや住所が写っている" />
+              <div>
+                <strong>車のナンバー・住所が写っている</strong>
+                <span>車、表札、郵便物、建物名、地番などが読める場合。</span>
+              </div>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" value="背景に生活感や見せたくないものが写っている" />
+              <div>
+                <strong>背景に見せたくないものがある</strong>
+                <span>散らかった場所、個人情報、掲示物、書類など。</span>
+              </div>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" value="掲載許可を取っていない人が写っている" />
+              <div>
+                <strong>掲載許可があいまい</strong>
+                <span>本人や保護者にSNS掲載の確認ができていない場合。</span>
+              </div>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" value="位置情報や行動予定がわかりそうな内容がある" />
+              <div>
+                <strong>場所や予定が特定されそう</strong>
+                <span>リアルタイム投稿、集合場所、帰宅時間などがわかる場合。</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="result-box">
+            <p class="score ok" id="scoreText">チェック待ち</p>
+            <p class="result-text" id="resultText">写真を選んで、気になる項目にチェックを入れてください。</p>
+
+            <div class="actions">
+              <button class="button" id="makeMemoBtn">📝 確認メモを作る</button>
+              <button class="button secondary" id="resetBtn">🔄 リセット</button>
+            </div>
+
+            <textarea class="copy-area" id="memoArea" readonly placeholder="ここに確認メモが表示されます。"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const photoInput = document.getElementById('photoInput');
+    const previewArea = document.getElementById('previewArea');
+    const checks = document.querySelectorAll('#checkList input[type="checkbox"]');
+    const scoreText = document.getElementById('scoreText');
+    const resultText = document.getElementById('resultText');
+    const makeMemoBtn = document.getElementById('makeMemoBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const memoArea = document.getElementById('memoArea');
+
+    let currentObjectUrl = null;
+    let currentFileName = '';
+
+    photoInput.addEventListener('change', () => {
+      const file = photoInput.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        previewArea.textContent = '画像ファイルを選んでください。';
+        return;
+      }
+
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = URL.createObjectURL(file);
+      currentFileName = file.name;
+
+      previewArea.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = currentObjectUrl;
+      img.alt = '選択した写真のプレビュー';
+      previewArea.appendChild(img);
+
+      updateResult();
+    });
+
+    checks.forEach(check => {
+      check.addEventListener('change', updateResult);
+    });
+
+    function getCheckedItems() {
+      return [...checks].filter(check => check.checked).map(check => check.value);
+    }
+
+    function updateResult() {
+      const count = getCheckedItems().length;
+      scoreText.classList.remove('ok', 'warn', 'danger');
+
+      if (!photoInput.files[0]) {
+        scoreText.textContent = 'チェック待ち';
+        scoreText.classList.add('ok');
+        resultText.textContent = '写真を選んで、気になる項目にチェックを入れてください。';
+        return;
+      }
+
+      if (count === 0) {
+        scoreText.textContent = '投稿しやすそうです';
+        scoreText.classList.add('ok');
+        resultText.textContent = '大きな気になる点はありません。念のため、顔・背景・文字の写り込みをもう一度見てから投稿しましょう。';
+      } else if (count <= 2) {
+        scoreText.textContent = '少し確認がおすすめ';
+        scoreText.classList.add('warn');
+        resultText.textContent = '気になる点があります。ぼかし・トリミング・掲載許可の確認をすると安心です。';
+      } else {
+        scoreText.textContent = '投稿前に要チェック';
+        scoreText.classList.add('danger');
+        resultText.textContent = '複数の注意点があります。そのまま投稿せず、加工や許可確認をしてから使うのがおすすめです。';
+      }
+    }
+
+    makeMemoBtn.addEventListener('click', () => {
+      const checkedItems = getCheckedItems();
+      const fileName = currentFileName || '未選択';
+
+      let memo = `SNS写真チェックメモ\n`;
+      memo += `写真：${fileName}\n\n`;
+
+      if (checkedItems.length === 0) {
+        memo += `結果：大きな気になる点はありません。\n`;
+        memo += `念のため、顔・文字・背景の写り込みを確認してから投稿します。`;
+      } else {
+        memo += `気になる項目：\n`;
+        checkedItems.forEach((item, index) => {
+          memo += `${index + 1}. ${item}\n`;
+        });
+        memo += `\n対応案：\n`;
+        memo += `・必要に応じてぼかしを入れる\n`;
+        memo += `・トリミングして写り込みを減らす\n`;
+        memo += `・本人または保護者に掲載許可を確認する\n`;
+        memo += `・リアルタイム投稿を避ける`;
+      }
+
+      memoArea.value = memo;
+      memoArea.focus();
+      memoArea.select();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      photoInput.value = '';
+      previewArea.textContent = 'ここに写真が表示されます';
+      checks.forEach(check => check.checked = false);
+      memoArea.value = '';
+      currentFileName = '';
+
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+
+      updateResult();
+    });
+  </script>
+</body>
+</html>
