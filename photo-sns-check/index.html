@@ -554,7 +554,7 @@ const response = await fetch(
       ctx.drawImage(previewImage, 0, 0, canvas.width, canvas.height);
 
       risks.filter(r => r.blur).forEach((risk) => {
-        const padding = Math.max(12, Math.min(risk.w, risk.h) * 0.2);
+        const padding = 2;
         applyMosaicBlur(
           ctx,
           risk.x - padding,
