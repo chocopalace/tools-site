@@ -443,26 +443,7 @@ function normalizeImage(file) {
         const item = document.createElement("div");
         item.className = "rounded-2xl border border-slate-200 bg-slate-50 p-3";
 
-        item.innerHTML = `
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="font-bold text-slate-900">${escapeHtml(risk.label)}</div>
-              <div class="mt-1 text-slate-600">${escapeHtml(risk.memo)}</div>
-            </div>
-
-            <button
-              class="blur-toggle shrink-0 rounded-xl px-3 py-2 text-xs font-bold ${
-                risk.blur
-                  ? "bg-blue-600 text-white"
-                  : "border border-slate-300 bg-white text-slate-700"
-              }"
-              data-index="${index}"
-            >
-              ${risk.blur ? "ぼかす" : "ぼかさない"}
-            </button>
-          </div>
-        `;
-
+item.innerHTML
         riskList.appendChild(item);
       });
 
@@ -494,6 +475,50 @@ function normalizeImage(file) {
       }
     }
 
+function createRiskThumbnail(risk) {
+  const canvas = document.createElement("canvas");
+  const size = 96;
+
+  canvas.width = size;
+  canvas.height = size;
+
+  const ctx = canvas.getContext("2d");
+
+  const padding = Math.max(
+    8,
+    Math.min(risk.w, risk.h) * 0.3
+  );
+
+  const sx = Math.max(0, risk.x - padding);
+  const sy = Math.max(0, risk.y - padding);
+
+  const sw = Math.min(
+    previewImage.naturalWidth - sx,
+    risk.w + padding * 2
+  );
+
+  const sh = Math.min(
+    previewImage.naturalHeight - sy,
+    risk.h + padding * 2
+  );
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+
+  ctx.drawImage(
+    previewImage,
+    sx,
+    sy,
+    sw,
+    sh,
+    0,
+    0,
+    size,
+    size
+  );
+
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
     function saveBlurredImage() {
       if (!previewImage.src || risks.length === 0) return;
 
