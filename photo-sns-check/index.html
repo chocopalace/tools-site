@@ -49,7 +49,7 @@
       </h1>
 
       <p class="mt-4 max-w-2xl text-slate-600">
-        写真に写り込んだ電話番号、住所、地名、学校名、店舗名などをOCRで読み取り、SNS投稿前に注意したい箇所を表示します。
+        写真に写り込んだ顔、電話番号、住所、地名、学校名、店舗名などをチェックし、SNS投稿前に注意したい箇所を表示します。
       </p>
 
       <div class="mt-5 flex flex-wrap gap-3">
@@ -123,7 +123,7 @@
         <div class="rounded-3xl bg-yellow-50 p-5 text-sm text-yellow-900">
           <p class="font-bold">注意</p>
           <p class="mt-2">
-            このチェックは完璧ではありません。特に顔、車のナンバー、背景の建物や制服などは、最後に必ず人の目で確認してください。
+            このチェックは完璧ではありません。顔検出は対応ブラウザのみ動作します。車のナンバー、背景の建物や制服などは、最後に必ず人の目で確認してください。
           </p>
         </div>
       </aside>
@@ -150,11 +150,42 @@
     let detectedRisks = [];
 
     const locationWords = [
-      "駅", "学校", "小学校", "中学校", "高校", "幼稚園", "保育園", "病院", "医院", "クリニック", "公園", "市", "区", "町", "丁目", "番地", "交差点", "店", "支店", "営業所", "株式会社", "マンション", "アパート", "ハイツ", "ビル", "モール", "センター", "ホール"
+      "駅", "学校", "小学校", "中学校", "高校", "大学", "幼稚園", "保育園", "病院", "医院", "クリニック", "公園", "交差点", "支店", "営業所", "株式会社", "マンション", "アパート", "ハイツ", "ビル", "モール", "センター", "ホール", "店", "町", "丁目", "番地"
     ];
 
-    function getRiskTypeFromText(text) {
-      const normalized = String(text || "").replace(/\s/g, "");
+    const garbagePatterns = [
+      /^[|｜!！:：;；,.，。、・'`´^~￣_\-ー=+*＊\/\\()（）\[\]{}<>＜＞]+$/,
+      /^[一丨丿丶乙亅]{1,4}$/,
+      /^[A-Za-z]{1,2}$/,
+      /^[0-9]{1,2}$/,
+      /^[ぁ-んァ-ヶ一-龠]{1,2}$/
+    ];
+
+    function cleanText(text) {
+      return String(text || "")
+        .replace(/[\n\r\t]/g, "")
+        .replace(/\s+/g, "")
+        .trim();
+    }
+
+    function isMeaninglessText(text, confidence) {
+      const value = cleanText(text);
+      if (!value) return true;
+      if (confidence !== undefined && confidence < 65) return true;
+      if (garbagePatterns.some((pattern) => pattern.test(value))) return true;
+
+      const hasUsefulChars = /[ぁ-んァ-ヶ一-龠A-Za-z0-9]/.test(value);
+      if (!hasUsefulChars) return true;
+
+      const japaneseOrNumberCount = (value.match(/[ぁ-んァ-ヶ一-龠A-Za-z0-9]/g) || []).length;
+      if (japaneseOrNumberCount < Math.max(2, value.length * 0.6)) return true;
+
+      return false;
+    }
+
+    function getRiskTypeFromText(text, confidence) {
+      const normalized = cleanText(text);
+      if (isMeaninglessText(normalized, confidence)) return null;
 
       if (/0\d{1,4}[-ー−]?\d{1,4}[-ー−]?\d{3,4}/.test(normalized)) {
         return { type: "phone", label: "電話番号", color: "#eab308", bg: "#fef9c3", text: "#854d0e" };
@@ -164,16 +195,12 @@
         return { type: "address", label: "郵便番号・住所", color: "#ec4899", bg: "#fce7f3", text: "#9d174d" };
       }
 
-      if (/(都|道|府|県|市|区|町|村|丁目|番地|号)/.test(normalized)) {
+      if (/(都|道|府|県|市|区|町|村|丁目|番地|号)/.test(normalized) && normalized.length >= 3) {
         return { type: "address", label: "住所の可能性", color: "#ec4899", bg: "#fce7f3", text: "#9d174d" };
       }
 
-      if (locationWords.some((word) => normalized.includes(word))) {
+      if (locationWords.some((word) => normalized.includes(word)) && normalized.length >= 3) {
         return { type: "location", label: "場所特定のヒント", color: "#3b82f6", bg: "#dbeafe", text: "#1d4ed8" };
-      }
-
-      if (/[ぁ-んァ-ヶ一-龠A-Za-z0-9]{4,}/.test(normalized)) {
-        return { type: "text", label: "文字情報", color: "#8b5cf6", bg: "#ede9fe", text: "#6d28d9" };
       }
 
       return null;
@@ -263,15 +290,50 @@
       });
     }
 
+    async function detectFaces() {
+      if (!("FaceDetector" in window)) {
+        return { faces: [], supported: false };
+      }
+
+      try {
+        const detector = new FaceDetector({ fastMode: false, maxDetectedFaces: 20 });
+        const faces = await detector.detect(previewImage);
+        const faceRisks = faces.map((face, index) => {
+          const box = face.boundingBox;
+          return {
+            id: `face-${index}`,
+            type: "face",
+            label: "顔",
+            color: "#ef4444",
+            bg: "#fee2e2",
+            text: "#b91c1c",
+            x: box.x,
+            y: box.y,
+            w: box.width,
+            h: box.height,
+            memo: "顔が認識できる可能性があります。",
+          };
+        });
+        return { faces: faceRisks, supported: true };
+      } catch (error) {
+        console.warn(error);
+        return { faces: [], supported: true };
+      }
+    }
+
     async function runOCR() {
       if (!selectedFile) return;
 
       resetResults();
       checkButton.disabled = true;
-      setStatus("OCRで画像内の文字を読み取っています…");
+      setStatus("顔と文字情報をチェックしています…");
       setProgress(1);
 
       try {
+        const faceResult = await detectFaces();
+
+        setStatus("OCRで画像内の文字を読み取っています…");
+
         const worker = await Tesseract.createWorker("jpn+eng", 1, {
           logger: (m) => {
             if (m.status === "recognizing text") {
@@ -280,26 +342,39 @@
           },
         });
 
+        await worker.setParameters({
+          tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+          preserve_interword_spaces: "1"
+        });
+
         const result = await worker.recognize(selectedFile);
         await worker.terminate();
 
-        const text = result.data.text || "";
-        ocrText.textContent = text.trim() || "文字は読み取れませんでした。";
+        const rawText = result.data.text || "";
+        const cleanLines = rawText
+          .split(/\n+/)
+          .map((line) => cleanText(line))
+          .filter((line) => !isMeaninglessText(line, 75));
+
+        ocrText.textContent = cleanLines.length > 0
+          ? cleanLines.join("\n")
+          : "意味のある文字は読み取れませんでした。";
 
         const words = result.data.words || [];
-        detectedRisks = words
+        const textRisks = words
           .map((word, index) => {
-            const raw = word.text || "";
-            const riskInfo = getRiskTypeFromText(raw);
+            const raw = cleanText(word.text || "");
+            const confidence = word.confidence;
+            const riskInfo = getRiskTypeFromText(raw, confidence);
             if (!riskInfo || !word.bbox) return null;
 
             const x = word.bbox.x0;
             const y = word.bbox.y0;
-            const w = Math.max(word.bbox.x1 - word.bbox.x0, 20);
-            const h = Math.max(word.bbox.y1 - word.bbox.y0, 20);
+            const w = Math.max(word.bbox.x1 - word.bbox.x0, 24);
+            const h = Math.max(word.bbox.y1 - word.bbox.y0, 24);
 
             return {
-              id: index,
+              id: `text-${index}`,
               ...riskInfo,
               x,
               y,
@@ -309,28 +384,21 @@
             };
           })
           .filter(Boolean)
-          .slice(0, 40);
+          .slice(0, 30);
 
-        const fullTextRisk = getRiskTypeFromText(text);
-        if (fullTextRisk && detectedRisks.length === 0) {
-          detectedRisks.push({
-            id: "full-text",
-            ...fullTextRisk,
-            x: previewImage.naturalWidth * 0.08,
-            y: previewImage.naturalHeight * 0.08,
-            w: previewImage.naturalWidth * 0.84,
-            h: previewImage.naturalHeight * 0.18,
-            memo: "画像内の文字に、個人情報や場所情報の可能性があります。",
-          });
-        }
+        detectedRisks = [...faceResult.faces, ...textRisks];
 
         drawRisks();
         updateRiskUI();
 
+        const faceNote = faceResult.supported
+          ? ""
+          : " 顔検出はこのブラウザでは未対応です。";
+
         if (detectedRisks.length === 0) {
-          setStatus("チェック完了。危険候補は見つかりませんでした。最後に目視でも確認してください。");
+          setStatus(`チェック完了。危険候補は見つかりませんでした。${faceNote}最後に目視でも確認してください。`);
         } else {
-          setStatus(`チェック完了。${detectedRisks.length}件の危険候補を検出しました。`);
+          setStatus(`チェック完了。${detectedRisks.length}件の危険候補を検出しました。${faceNote}`);
         }
       } catch (error) {
         console.error(error);
