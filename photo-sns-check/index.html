@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
-import { Upload, Eye, Car, Phone, MapPin, Home, User, AlertTriangle, X, CircleDot } from "lucide-react";
+import { createWorker } from "tesseract.js";
+import { Upload, Eye, Car, Phone, MapPin, Home, User, AlertTriangle, X, CircleDot, Loader2, ScanSearch, ShieldCheck, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -9,46 +10,164 @@ const riskTypes = [
   { id: "phone", label: "電話番号", icon: Phone, color: "border-yellow-500", bg: "bg-yellow-50", text: "text-yellow-700" },
   { id: "address", label: "住所・表札", icon: Home, color: "border-pink-500", bg: "bg-pink-50", text: "text-pink-700" },
   { id: "location", label: "場所特定のヒント", icon: MapPin, color: "border-blue-500", bg: "bg-blue-50", text: "text-blue-700" },
+  { id: "text", label: "文字情報", icon: Type, color: "border-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
 ];
 
-const initialMarks = [
-  { id: 1, type: "face", x: 25, y: 24, w: 16, h: 18, memo: "顔が認識できる可能性" },
-  { id: 2, type: "plate", x: 55, y: 67, w: 22, h: 9, memo: "ナンバーが読める可能性" },
-  { id: 3, type: "location", x: 62, y: 18, w: 28, h: 14, memo: "看板・建物名から場所特定の可能性" },
+const locationWords = [
+  "駅", "学校", "小学校", "中学校", "高校", "幼稚園", "保育園", "病院", "医院", "クリニック", "公園", "市", "区", "町", "丁目", "番地", "交差点", "店", "支店", "営業所", "株式会社", "マンション", "アパート", "ハイツ"
 ];
+
+function getRiskTypeFromText(text) {
+  const normalized = text.replace(/\s/g, "");
+  if (/0\d{1,4}[-ー−]?\d{1,4}[-ー−]?\d{3,4}/.test(normalized)) return "phone";
+  if (/\d{3}[-ー−]?\d{4}/.test(normalized)) return "address";
+  if (/(都|道|府|県|市|区|町|村|丁目|番地|号)/.test(normalized)) return "address";
+  if (locationWords.some((word) => normalized.includes(word))) return "location";
+  if (/[ぁ-んァ-ヶ一-龠A-Za-z0-9]{3,}/.test(normalized)) return "text";
+  return null;
+}
+
+function clampPercent(value) {
+  return Math.max(0, Math.min(100, value));
+}
 
 export default function SNSPhotoRiskCheckerPrototype() {
   const [image, setImage] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imageSize, setImageSize] = useState({ width: 1, height: 1 });
   const [marks, setMarks] = useState([]);
   const [selectedType, setSelectedType] = useState("face");
-  const [isDemo, setIsDemo] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [ocrText, setOcrText] = useState("");
+  const [message, setMessage] = useState("写真を選んで、自動チェックを押してください。");
   const fileRef = useRef(null);
 
   const handleFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.src = url;
     setImage(url);
+    setImageFile(file);
     setMarks([]);
-    setIsDemo(false);
+    setOcrText("");
+    setProgress(0);
+    setMessage("写真を読み込みました。自動チェックを開始できます。");
   };
 
-  const addDemoMarks = () => {
-    if (!image) return;
-    setMarks(initialMarks);
-    setIsDemo(true);
+  const detectFaces = async () => {
+    if (!image || !("FaceDetector" in window)) return [];
+    try {
+      const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 20 });
+      const img = new Image();
+      img.src = image;
+      await new Promise((resolve) => (img.onload = resolve));
+      const faces = await detector.detect(img);
+      return faces.map((face, index) => {
+        const box = face.boundingBox;
+        return {
+          id: `face-${index}-${Date.now()}`,
+          type: "face",
+          x: clampPercent((box.x / imageSize.width) * 100),
+          y: clampPercent((box.y / imageSize.height) * 100),
+          w: clampPercent((box.width / imageSize.width) * 100),
+          h: clampPercent((box.height / imageSize.height) * 100),
+          memo: "顔が認識できる可能性があります",
+        };
+      });
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const detectTextRisks = async () => {
+    if (!imageFile) return [];
+    const worker = await createWorker("jpn+eng", 1, {
+      logger: (m) => {
+        if (m.status === "recognizing text") setProgress(Math.round(m.progress * 100));
+      },
+    });
+
+    const result = await worker.recognize(imageFile);
+    await worker.terminate();
+
+    const text = result?.data?.text || "";
+    setOcrText(text.trim());
+
+    const words = result?.data?.words || [];
+    const detected = [];
+
+    words.forEach((word, index) => {
+      const raw = word.text || "";
+      const type = getRiskTypeFromText(raw);
+      if (!type || !word.bbox) return;
+
+      const { x0, y0, x1, y1 } = word.bbox;
+      detected.push({
+        id: `text-${index}-${Date.now()}`,
+        type,
+        x: clampPercent((x0 / imageSize.width) * 100),
+        y: clampPercent((y0 / imageSize.height) * 100),
+        w: clampPercent(((x1 - x0) / imageSize.width) * 100),
+        h: clampPercent(((y1 - y0) / imageSize.height) * 100),
+        memo: `「${raw}」が写り込んでいます`,
+      });
+    });
+
+    const fullTextType = getRiskTypeFromText(text);
+    if (fullTextType && detected.length === 0) {
+      detected.push({
+        id: `full-text-${Date.now()}`,
+        type: fullTextType,
+        x: 12,
+        y: 12,
+        w: 76,
+        h: 18,
+        memo: "画像内テキストに個人情報・場所情報の可能性があります",
+      });
+    }
+
+    return detected.slice(0, 30);
+  };
+
+  const runAutoCheck = async () => {
+    if (!image || !imageFile) return;
+    setIsChecking(true);
+    setProgress(0);
+    setMessage("顔と文字情報をチェックしています…");
+    try {
+      const faceMarks = await detectFaces();
+      const textMarks = await detectTextRisks();
+      const allMarks = [...faceMarks, ...textMarks];
+      setMarks(allMarks);
+
+      if (allMarks.length === 0) {
+        setMessage("危険候補は見つかりませんでした。ただし、AIチェックは完璧ではないため投稿前に目視確認してください。");
+      } else {
+        setMessage(`${allMarks.length}件の危険候補を検出しました。○の位置を確認してください。`);
+      }
+    } catch (error) {
+      setMessage("自動チェック中にエラーが出ました。画像が大きすぎる場合は、少し小さくして再試行してください。");
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   const addManualMark = () => {
-    const offset = marks.length * 4;
+    const offset = marks.length * 3;
     const type = riskTypes.find((r) => r.id === selectedType);
     setMarks([
       ...marks,
       {
-        id: Date.now(),
+        id: `manual-${Date.now()}`,
         type: selectedType,
-        x: Math.min(70, 20 + offset),
-        y: Math.min(70, 20 + offset),
+        x: Math.min(72, 18 + offset),
+        y: Math.min(72, 18 + offset),
         w: 22,
         h: 14,
         memo: `${type?.label || "危険箇所"}の可能性`,
@@ -72,10 +191,10 @@ export default function SNSPhotoRiskCheckerPrototype() {
           <div className="grid gap-4 md:grid-cols-[1.4fr_.8fr] md:items-end">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">
-                写真の危険箇所を<br className="hidden md:block" />○で見える化
+                写真の危険箇所を<br className="hidden md:block" />AIで見える化
               </h1>
               <p className="mt-3 max-w-2xl text-slate-600">
-                顔・車のナンバー・電話番号・住所・場所特定につながる看板など、SNS投稿前に確認したい箇所をマーキングする試作品です。
+                顔・電話番号・住所・場所特定につながる文字を自動チェックし、写真上に○で表示する試作品です。
               </p>
             </div>
             <Card className="rounded-2xl border-0 shadow-sm">
@@ -101,13 +220,17 @@ export default function SNSPhotoRiskCheckerPrototype() {
                   <Button onClick={() => fileRef.current?.click()} className="rounded-xl">
                     <Upload className="mr-2 h-4 w-4" /> 写真を選ぶ
                   </Button>
-                  <Button variant="outline" onClick={addDemoMarks} disabled={!image} className="rounded-xl">
-                    <Eye className="mr-2 h-4 w-4" /> 危険候補を表示
+                  <Button variant="outline" onClick={runAutoCheck} disabled={!image || isChecking} className="rounded-xl">
+                    {isChecking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanSearch className="mr-2 h-4 w-4" />}
+                    自動チェック
                   </Button>
-                  <span className="text-xs text-slate-500">
-                    ※今は試作品のため、検出位置はデモ表示です
-                  </span>
+                  <span className="text-xs text-slate-500">{message}</span>
                 </div>
+                {isChecking && (
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-slate-900 transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                )}
               </div>
 
               <div className="relative flex min-h-[480px] items-center justify-center bg-slate-100 p-4">
@@ -127,8 +250,8 @@ export default function SNSPhotoRiskCheckerPrototype() {
                       return (
                         <div
                           key={mark.id}
-                          className={`absolute rounded-full border-4 ${risk.color} bg-white/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.02)]`}
-                          style={{ left: `${mark.x}%`, top: `${mark.y}%`, width: `${mark.w}%`, height: `${mark.h}%` }}
+                          className={`absolute rounded-full border-4 ${risk.color} bg-white/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.015)]`}
+                          style={{ left: `${mark.x}%`, top: `${mark.y}%`, width: `${Math.max(mark.w, 8)}%`, height: `${Math.max(mark.h, 6)}%` }}
                           title={mark.memo}
                         >
                           <span className={`absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full ${risk.bg} px-3 py-1 text-xs font-bold ${risk.text} shadow-sm`}>
@@ -146,7 +269,7 @@ export default function SNSPhotoRiskCheckerPrototype() {
           <div className="space-y-6">
             <Card className="rounded-2xl border-0 shadow-sm">
               <CardContent className="space-y-4 p-5">
-                <h2 className="text-lg font-bold text-slate-900">チェック対象</h2>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900"><ShieldCheck className="h-5 w-5" />チェック対象</h2>
                 <div className="grid gap-2">
                   {riskTypes.map((risk) => {
                     const Icon = risk.icon;
@@ -164,7 +287,7 @@ export default function SNSPhotoRiskCheckerPrototype() {
                   })}
                 </div>
                 <Button onClick={addManualMark} disabled={!image} variant="secondary" className="w-full rounded-xl">
-                  選択中の項目を追加
+                  選択中の項目を手動追加
                 </Button>
               </CardContent>
             </Card>
@@ -174,10 +297,10 @@ export default function SNSPhotoRiskCheckerPrototype() {
                 <h2 className="text-lg font-bold text-slate-900">検出された危険候補</h2>
                 {marks.length === 0 ? (
                   <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
-                    まだ危険候補はありません。写真を選んで「危険候補を表示」を押してください。
+                    まだ危険候補はありません。写真を選んで「自動チェック」を押してください。
                   </p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="max-h-80 space-y-2 overflow-auto pr-1">
                     {marks.map((mark) => {
                       const risk = riskTypes.find((r) => r.id === mark.type) || riskTypes[0];
                       const Icon = risk.icon;
@@ -201,13 +324,13 @@ export default function SNSPhotoRiskCheckerPrototype() {
 
             <Card className="rounded-2xl border-0 bg-slate-900 text-white shadow-sm">
               <CardContent className="space-y-3 p-5">
-                <h2 className="text-lg font-bold">次に本格実装するなら</h2>
-                <p className="text-sm text-slate-300">
-                  顔検出、OCR、ナンバープレート検出、住所・電話番号の正規表現チェック、背景リスク判定を組み合わせると実用版に近づきます。
+                <h2 className="text-lg font-bold">読み取った文字</h2>
+                <p className="max-h-36 overflow-auto whitespace-pre-wrap rounded-xl bg-white/10 p-3 text-sm text-slate-300">
+                  {ocrText || "まだOCR結果はありません。"}
                 </p>
-                <div className="rounded-xl bg-white/10 p-3 text-sm">
-                  推奨機能：自動ぼかし／投稿OK判定／子ども向け説明表示
-                </div>
+                <p className="text-xs text-slate-400">
+                  注意：ブラウザの顔検出機能は対応環境のみ動作します。OCRは読み取り漏れがあるため、最後は人の目で確認してください。
+                </p>
               </CardContent>
             </Card>
           </div>
