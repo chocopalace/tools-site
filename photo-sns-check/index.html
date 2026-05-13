@@ -265,7 +265,7 @@
         console.log(data);
 
         if (!response.ok || data.error) {
-          throw new Error(data.error?.message || "Google Vision APIでエラーが発生しました");
+          throw new Error(data.error || "Google Vision APIでエラーが発生しました");
         }
 
         const result = data.responses[0] || {};
