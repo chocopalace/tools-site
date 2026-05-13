@@ -36,9 +36,7 @@
 <body class="min-h-screen bg-slate-100 text-slate-900">
   <main class="mx-auto max-w-6xl p-4 md:p-8">
     <section class="mb-6 rounded-3xl bg-white p-6 shadow-sm">
-      <h1 class="text-3xl font-bold md:text-5xl">
-        SNS写真 危険チェック
-      </h1>
+      <h1 class="text-3xl font-bold md:text-5xl">SNS写真 危険チェック</h1>
 
       <p class="mt-4 text-slate-600">
         顔・電話番号・住所・学校名・看板などをAIで検出します。
@@ -158,26 +156,25 @@
 
     selectBtn.addEventListener("click", () => fileInput.click());
 
-fileInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-  selectedFile = file;
+      selectedFile = file;
 
-  const normalized = await normalizeImage(file);
+      const normalized = await normalizeImage(file);
+      imageBase64 = normalized.base64;
+      previewImage.src = normalized.dataUrl;
 
-  imageBase64 = normalized.base64;
-  previewImage.src = normalized.dataUrl;
+      previewWrap.classList.remove("hidden");
+      emptyState.classList.add("hidden");
 
-  previewWrap.classList.remove("hidden");
-  emptyState.classList.add("hidden");
-
-  previewImage.onload = () => {
-    checkBtn.disabled = false;
-    resetAll();
-    setStatus("写真を読み込みました。AIチェックを押してください。");
-  };
-});
+      previewImage.onload = () => {
+        checkBtn.disabled = false;
+        resetAll();
+        setStatus("写真を読み込みました。AIチェックを押してください。");
+      };
+    });
 
     checkBtn.addEventListener("click", runVisionCheck);
     resetBtn.addEventListener("click", fullReset);
@@ -193,52 +190,45 @@ fileInput.addEventListener("change", async (e) => {
       renderAll();
     });
 
-    function toBase64(file) {
+    function normalizeImage(file) {
       return new Promise((resolve, reject) => {
+        const img = new Image();
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
+
+        reader.onload = () => {
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const maxWidth = 1600;
+
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+            const base64 = dataUrl.split(",")[1];
+
+            resolve({ dataUrl, base64 });
+          };
+
+          img.onerror = reject;
+          img.src = reader.result;
+        };
+
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
     }
-function normalizeImage(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const reader = new FileReader();
 
-    reader.onload = () => {
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const maxWidth = 1600;
-
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        const base64 = dataUrl.split(",")[1];
-
-        resolve({ dataUrl, base64 });
-      };
-
-      img.onerror = reject;
-      img.src = reader.result;
-    };
-
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
     async function runVisionCheck() {
       if (!imageBase64) return;
 
@@ -261,8 +251,7 @@ function normalizeImage(file) {
                     { type: "FACE_DETECTION", maxResults: 50 },
                     { type: "TEXT_DETECTION", maxResults: 100 },
                     { type: "LANDMARK_DETECTION", maxResults: 20 },
-                    { type: "LOGO_DETECTION", maxResults: 20 },
-                    { type: "LABEL_DETECTION", maxResults: 30 }
+                    { type: "LOGO_DETECTION", maxResults: 20 }
                   ]
                 }
               ]
@@ -314,7 +303,7 @@ function normalizeImage(file) {
               id: `text-${index}`,
               label: type,
               memo: `「${value}」が写り込んでいます。`,
-              color: type.includes("電話") ? "#eab308" : "#2563eb",
+              color: getColorByLabel(type),
               blur: true,
               ...box
             });
@@ -332,6 +321,23 @@ function normalizeImage(file) {
               label: "ランドマーク",
               memo: landmark.description || "場所特定につながる可能性があります。",
               color: "#9333ea",
+              blur: false,
+              ...box
+            });
+          });
+        }
+
+        if (result.logoAnnotations) {
+          result.logoAnnotations.forEach((logo, index) => {
+            if (!logo.boundingPoly?.vertices) return;
+
+            const box = verticesToBox(logo.boundingPoly.vertices);
+
+            risks.push({
+              id: `logo-${index}`,
+              label: "ロゴ・店舗名",
+              memo: logo.description || "店舗や団体が特定される可能性があります。",
+              color: "#f97316",
               blur: false,
               ...box
             });
@@ -361,6 +367,10 @@ function normalizeImage(file) {
         return "電話番号";
       }
 
+      if (/\d{2,4}[-ー−]\d{1,4}/.test(value)) {
+        return "ナンバー・番号";
+      }
+
       if (/\d{3}[-ー−]?\d{4}/.test(value)) {
         return "郵便番号・住所";
       }
@@ -369,11 +379,19 @@ function normalizeImage(file) {
         return "住所・地名";
       }
 
-      if (/(学校|小学校|中学校|高校|大学|幼稚園|保育園|駅|病院|医院|クリニック|公園|店|支店|営業所|株式会社|モール|センター|ホール)/.test(value)) {
+      if (/(学校|小学校|中学校|高校|大学|幼稚園|保育園|駅|病院|医院|クリニック|公園|店|支店|営業所|株式会社|モール|センター|ホール|PLAZA|SHOP|CAFE|HAPPY|MENU)/i.test(value)) {
         return "場所特定のヒント";
       }
 
       return null;
+    }
+
+    function getColorByLabel(label) {
+      if (label.includes("電話")) return "#eab308";
+      if (label.includes("ナンバー")) return "#22c55e";
+      if (label.includes("住所")) return "#ec4899";
+      if (label.includes("場所")) return "#2563eb";
+      return "#64748b";
     }
 
     function verticesToBox(vertices) {
@@ -443,7 +461,34 @@ function normalizeImage(file) {
         const item = document.createElement("div");
         item.className = "rounded-2xl border border-slate-200 bg-slate-50 p-3";
 
-item.innerHTML
+        item.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-start gap-3">
+              <img
+                src="${createRiskThumbnail(risk)}"
+                class="h-16 w-16 shrink-0 rounded-xl border bg-white object-cover"
+                alt="検出部分"
+              />
+
+              <div>
+                <div class="font-bold text-slate-900">${escapeHtml(risk.label)}</div>
+                <div class="mt-1 text-slate-600">${escapeHtml(risk.memo)}</div>
+              </div>
+            </div>
+
+            <button
+              class="blur-toggle shrink-0 rounded-xl px-3 py-2 text-xs font-bold ${
+                risk.blur
+                  ? "bg-blue-600 text-white"
+                  : "border border-slate-300 bg-white text-slate-700"
+              }"
+              data-index="${index}"
+            >
+              ${risk.blur ? "ぼかす" : "ぼかさない"}
+            </button>
+          </div>
+        `;
+
         riskList.appendChild(item);
       });
 
@@ -458,6 +503,39 @@ item.innerHTML
       saveBlurBtn.disabled = false;
       allBlurBtn.disabled = false;
       allClearBtn.disabled = false;
+    }
+
+    function createRiskThumbnail(risk) {
+      const canvas = document.createElement("canvas");
+      const size = 96;
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx = canvas.getContext("2d");
+
+      const padding = Math.max(8, Math.min(risk.w, risk.h) * 0.35);
+
+      const sx = Math.max(0, risk.x - padding);
+      const sy = Math.max(0, risk.y - padding);
+      const sw = Math.min(previewImage.naturalWidth - sx, risk.w + padding * 2);
+      const sh = Math.min(previewImage.naturalHeight - sy, risk.h + padding * 2);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.drawImage(
+        previewImage,
+        sx,
+        sy,
+        sw,
+        sh,
+        0,
+        0,
+        size,
+        size
+      );
+
+      return canvas.toDataURL("image/jpeg", 0.85);
     }
 
     function updateRiskScore() {
@@ -475,50 +553,6 @@ item.innerHTML
       }
     }
 
-function createRiskThumbnail(risk) {
-  const canvas = document.createElement("canvas");
-  const size = 96;
-
-  canvas.width = size;
-  canvas.height = size;
-
-  const ctx = canvas.getContext("2d");
-
-  const padding = Math.max(
-    8,
-    Math.min(risk.w, risk.h) * 0.3
-  );
-
-  const sx = Math.max(0, risk.x - padding);
-  const sy = Math.max(0, risk.y - padding);
-
-  const sw = Math.min(
-    previewImage.naturalWidth - sx,
-    risk.w + padding * 2
-  );
-
-  const sh = Math.min(
-    previewImage.naturalHeight - sy,
-    risk.h + padding * 2
-  );
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, size, size);
-
-  ctx.drawImage(
-    previewImage,
-    sx,
-    sy,
-    sw,
-    sh,
-    0,
-    0,
-    size,
-    size
-  );
-
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
     function saveBlurredImage() {
       if (!previewImage.src || risks.length === 0) return;
 
