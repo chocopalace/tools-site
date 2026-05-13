@@ -128,7 +128,7 @@
   </main>
 
   <script>
-    const GOOGLE_VISION_API_KEY = "AIzaSyDsob6xE6KrCkSuTbvuJNQR7KYZ3LGcaGY";
+    
 
     const fileInput = document.getElementById("fileInput");
     const selectBtn = document.getElementById("selectBtn");
@@ -239,7 +239,7 @@
 
       try {
         const response = await fetch(
-          `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
+  "https://vision-api.chocopalace-kyoto.workers.dev/vision-api",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
