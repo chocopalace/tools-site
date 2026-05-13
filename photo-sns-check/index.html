@@ -349,6 +349,11 @@
         setProgress(60);
 
         const data = await response.json();
+        console.log(data);
+
+if (data.error) {
+  throw new Error(data.error.message);
+}
 
         console.log(data);
 
@@ -544,15 +549,14 @@
           "解析完了";
 
       }
-      catch (e) {
+catch (e) {
 
-        console.error(e);
+  console.error(e);
 
-        statusText.textContent =
-          "エラーが発生しました";
+  statusText.textContent =
+    "エラー：" + e.message;
 
-      }
-
+}
     });
 
     // =========================
