@@ -229,24 +229,27 @@
       });
     }
 
-    async function runVisionCheck() {
-      if (!imageBase64) return;
-
+async function runVisionCheck() {
+  if (!imageBase64) {
+    setStatus("エラー：画像データがまだ準備できていません。写真を選び直してください。");
+    return;
+  }
       risks = [];
       renderAll();
       setProgress(20);
       setStatus("Google Vision APIで解析中...");
 
       try {
-        const response = await fetch(
+const response = await fetch(
   "https://vision-api.chocopalace-kyoto.workers.dev/vision-api",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-body: JSON.stringify({
-  imageBase64: imageBase64
-})
-        setProgress(60);
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      imageBase64: imageBase64
+    })
+  }
+);        setProgress(60);
 
         const data = await response.json();
         console.log(data);
