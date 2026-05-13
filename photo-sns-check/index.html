@@ -1,29 +1,119 @@
 import React, { useRef, useState } from "react";
 import { createWorker } from "tesseract.js";
-import { Upload, Eye, Car, Phone, MapPin, Home, User, AlertTriangle, X, CircleDot, Loader2, ScanSearch, ShieldCheck, Type } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Upload,
+  Car,
+  Phone,
+  MapPin,
+  Home,
+  User,
+  AlertTriangle,
+  X,
+  CircleDot,
+  Loader2,
+  ScanSearch,
+  ShieldCheck,
+  Type,
+} from "lucide-react";
 
 const riskTypes = [
-  { id: "face", label: "顔", icon: User, color: "border-red-500", bg: "bg-red-50", text: "text-red-700" },
-  { id: "plate", label: "車のナンバー", icon: Car, color: "border-orange-500", bg: "bg-orange-50", text: "text-orange-700" },
-  { id: "phone", label: "電話番号", icon: Phone, color: "border-yellow-500", bg: "bg-yellow-50", text: "text-yellow-700" },
-  { id: "address", label: "住所・表札", icon: Home, color: "border-pink-500", bg: "bg-pink-50", text: "text-pink-700" },
-  { id: "location", label: "場所特定のヒント", icon: MapPin, color: "border-blue-500", bg: "bg-blue-50", text: "text-blue-700" },
-  { id: "text", label: "文字情報", icon: Type, color: "border-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
+  {
+    id: "face",
+    label: "顔",
+    icon: User,
+    color: "border-red-500",
+    bg: "bg-red-50",
+    text: "text-red-700",
+  },
+  {
+    id: "plate",
+    label: "車のナンバー",
+    icon: Car,
+    color: "border-orange-500",
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+  },
+  {
+    id: "phone",
+    label: "電話番号",
+    icon: Phone,
+    color: "border-yellow-500",
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+  },
+  {
+    id: "address",
+    label: "住所・表札",
+    icon: Home,
+    color: "border-pink-500",
+    bg: "bg-pink-50",
+    text: "text-pink-700",
+  },
+  {
+    id: "location",
+    label: "場所特定のヒント",
+    icon: MapPin,
+    color: "border-blue-500",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+  },
+  {
+    id: "text",
+    label: "文字情報",
+    icon: Type,
+    color: "border-purple-500",
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+  },
 ];
 
 const locationWords = [
-  "駅", "学校", "小学校", "中学校", "高校", "幼稚園", "保育園", "病院", "医院", "クリニック", "公園", "市", "区", "町", "丁目", "番地", "交差点", "店", "支店", "営業所", "株式会社", "マンション", "アパート", "ハイツ"
+  "駅",
+  "学校",
+  "小学校",
+  "中学校",
+  "高校",
+  "幼稚園",
+  "保育園",
+  "病院",
+  "医院",
+  "クリニック",
+  "公園",
+  "市",
+  "区",
+  "町",
+  "丁目",
+  "番地",
+  "交差点",
+  "店",
+  "支店",
+  "営業所",
+  "株式会社",
 ];
 
 function getRiskTypeFromText(text) {
   const normalized = text.replace(/\s/g, "");
-  if (/0\d{1,4}[-ー−]?\d{1,4}[-ー−]?\d{3,4}/.test(normalized)) return "phone";
-  if (/\d{3}[-ー−]?\d{4}/.test(normalized)) return "address";
-  if (/(都|道|府|県|市|区|町|村|丁目|番地|号)/.test(normalized)) return "address";
-  if (locationWords.some((word) => normalized.includes(word))) return "location";
-  if (/[ぁ-んァ-ヶ一-龠A-Za-z0-9]{3,}/.test(normalized)) return "text";
+
+  if (/0\d{1,4}[-ー−]?\d{1,4}[-ー−]?\d{3,4}/.test(normalized)) {
+    return "phone";
+  }
+
+  if (/\d{3}[-ー−]?\d{4}/.test(normalized)) {
+    return "address";
+  }
+
+  if (/(都|道|府|県|市|区|町|村|丁目|番地|号)/.test(normalized)) {
+    return "address";
+  }
+
+  if (locationWords.some((word) => normalized.includes(word))) {
+    return "location";
+  }
+
+  if (/[ぁ-んァ-ヶ一-龠A-Za-z0-9]{3,}/.test(normalized)) {
+    return "text";
+  }
+
   return null;
 }
 
@@ -31,308 +121,258 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, value));
 }
 
-export default function SNSPhotoRiskCheckerPrototype() {
+export default function App() {
   const [image, setImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  const [imageSize, setImageSize] = useState({ width: 1, height: 1 });
   const [marks, setMarks] = useState([]);
-  const [selectedType, setSelectedType] = useState("face");
+  const [ocrText, setOcrText] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [ocrText, setOcrText] = useState("");
-  const [message, setMessage] = useState("写真を選んで、自動チェックを押してください。");
+  const [message, setMessage] = useState(
+    "写真を選んで自動チェックしてください"
+  );
+
   const fileRef = useRef(null);
 
   const handleFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
     const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.src = url;
+
     setImage(url);
     setImageFile(file);
     setMarks([]);
     setOcrText("");
-    setProgress(0);
-    setMessage("写真を読み込みました。自動チェックを開始できます。");
-  };
-
-  const detectFaces = async () => {
-    if (!image || !("FaceDetector" in window)) return [];
-    try {
-      const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 20 });
-      const img = new Image();
-      img.src = image;
-      await new Promise((resolve) => (img.onload = resolve));
-      const faces = await detector.detect(img);
-      return faces.map((face, index) => {
-        const box = face.boundingBox;
-        return {
-          id: `face-${index}-${Date.now()}`,
-          type: "face",
-          x: clampPercent((box.x / imageSize.width) * 100),
-          y: clampPercent((box.y / imageSize.height) * 100),
-          w: clampPercent((box.width / imageSize.width) * 100),
-          h: clampPercent((box.height / imageSize.height) * 100),
-          memo: "顔が認識できる可能性があります",
-        };
-      });
-    } catch (error) {
-      return [];
-    }
+    setMessage("画像を読み込みました");
   };
 
   const detectTextRisks = async () => {
     if (!imageFile) return [];
+
     const worker = await createWorker("jpn+eng", 1, {
       logger: (m) => {
-        if (m.status === "recognizing text") setProgress(Math.round(m.progress * 100));
+        if (m.status === "recognizing text") {
+          setProgress(Math.round(m.progress * 100));
+        }
       },
     });
 
     const result = await worker.recognize(imageFile);
+
     await worker.terminate();
 
     const text = result?.data?.text || "";
-    setOcrText(text.trim());
+    setOcrText(text);
 
     const words = result?.data?.words || [];
+
     const detected = [];
 
     words.forEach((word, index) => {
       const raw = word.text || "";
+
       const type = getRiskTypeFromText(raw);
+
       if (!type || !word.bbox) return;
 
       const { x0, y0, x1, y1 } = word.bbox;
+
       detected.push({
-        id: `text-${index}-${Date.now()}`,
+        id: `text-${index}`,
         type,
-        x: clampPercent((x0 / imageSize.width) * 100),
-        y: clampPercent((y0 / imageSize.height) * 100),
-        w: clampPercent(((x1 - x0) / imageSize.width) * 100),
-        h: clampPercent(((y1 - y0) / imageSize.height) * 100),
-        memo: `「${raw}」が写り込んでいます`,
+        x: clampPercent(x0 / 10),
+        y: clampPercent(y0 / 10),
+        w: clampPercent((x1 - x0) / 10),
+        h: clampPercent((y1 - y0) / 10),
+        memo: `${raw} が写っています`,
       });
     });
 
-    const fullTextType = getRiskTypeFromText(text);
-    if (fullTextType && detected.length === 0) {
-      detected.push({
-        id: `full-text-${Date.now()}`,
-        type: fullTextType,
-        x: 12,
-        y: 12,
-        w: 76,
-        h: 18,
-        memo: "画像内テキストに個人情報・場所情報の可能性があります",
-      });
-    }
-
-    return detected.slice(0, 30);
+    return detected;
   };
 
   const runAutoCheck = async () => {
-    if (!image || !imageFile) return;
-    setIsChecking(true);
-    setProgress(0);
-    setMessage("顔と文字情報をチェックしています…");
-    try {
-      const faceMarks = await detectFaces();
-      const textMarks = await detectTextRisks();
-      const allMarks = [...faceMarks, ...textMarks];
-      setMarks(allMarks);
+    if (!imageFile) return;
 
-      if (allMarks.length === 0) {
-        setMessage("危険候補は見つかりませんでした。ただし、AIチェックは完璧ではないため投稿前に目視確認してください。");
+    setIsChecking(true);
+    setMessage("画像を解析中...");
+
+    try {
+      const detected = await detectTextRisks();
+
+      setMarks(detected);
+
+      if (detected.length === 0) {
+        setMessage("危険箇所は見つかりませんでした");
       } else {
-        setMessage(`${allMarks.length}件の危険候補を検出しました。○の位置を確認してください。`);
+        setMessage(`${detected.length} 件の危険候補を検出`);
       }
-    } catch (error) {
-      setMessage("自動チェック中にエラーが出ました。画像が大きすぎる場合は、少し小さくして再試行してください。");
+    } catch (e) {
+      setMessage("エラーが発生しました");
     } finally {
       setIsChecking(false);
     }
   };
 
-  const addManualMark = () => {
-    const offset = marks.length * 3;
-    const type = riskTypes.find((r) => r.id === selectedType);
-    setMarks([
-      ...marks,
-      {
-        id: `manual-${Date.now()}`,
-        type: selectedType,
-        x: Math.min(72, 18 + offset),
-        y: Math.min(72, 18 + offset),
-        w: 22,
-        h: 14,
-        memo: `${type?.label || "危険箇所"}の可能性`,
-      },
-    ]);
-  };
-
-  const removeMark = (id) => setMarks(marks.filter((m) => m.id !== id));
-
-  const riskScore = marks.length === 0 ? "低" : marks.length <= 2 ? "中" : "高";
-  const riskScoreClass = marks.length === 0 ? "text-green-700 bg-green-50" : marks.length <= 2 ? "text-yellow-700 bg-yellow-50" : "text-red-700 bg-red-50";
-
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">
-            <AlertTriangle className="h-4 w-4" />
-            SNS投稿前の写真リスクチェック
-          </div>
-          <div className="grid gap-4 md:grid-cols-[1.4fr_.8fr] md:items-end">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">
-                写真の危険箇所を<br className="hidden md:block" />AIで見える化
-              </h1>
-              <p className="mt-3 max-w-2xl text-slate-600">
-                顔・電話番号・住所・場所特定につながる文字を自動チェックし、写真上に○で表示する試作品です。
-              </p>
+    <div className="min-h-screen bg-slate-100 p-6">
+      <div className="mx-auto max-w-6xl">
+        <h1 className="mb-4 text-4xl font-bold">
+          SNS写真 危険チェック
+        </h1>
+
+        <div className="mb-4 flex gap-3">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFile}
+          />
+
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="rounded bg-blue-600 px-4 py-2 text-white"
+          >
+            <Upload className="mr-2 inline h-4 w-4" />
+            写真を選ぶ
+          </button>
+
+          <button
+            onClick={runAutoCheck}
+            disabled={!image || isChecking}
+            className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+          >
+            {isChecking ? (
+              <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+            ) : (
+              <ScanSearch className="mr-2 inline h-4 w-4" />
+            )}
+            自動チェック
+          </button>
+        </div>
+
+        <div className="mb-4 rounded bg-white p-4 shadow">
+          <p>{message}</p>
+
+          {isChecking && (
+            <div className="mt-2 h-2 w-full overflow-hidden rounded bg-gray-200">
+              <div
+                className="h-full bg-blue-600"
+                style={{ width: `${progress}%` }}
+              />
             </div>
-            <Card className="rounded-2xl border-0 shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">現在の危険度</span>
-                  <span className={`rounded-full px-3 py-1 text-sm font-bold ${riskScoreClass}`}>{riskScore}</span>
+          )}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded bg-white p-4 shadow">
+            {!image ? (
+              <div className="flex h-[500px] items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <CircleDot className="mx-auto mb-2 h-10 w-10" />
+                  写真を選択してください
                 </div>
-                <p className="mt-3 text-sm text-slate-600">
-                  検出・登録された危険候補：<span className="font-bold text-slate-900">{marks.length}</span>件
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </header>
-
-        <div className="grid gap-6 lg:grid-cols-[1.5fr_.8fr]">
-          <Card className="overflow-hidden rounded-2xl border-0 shadow-sm">
-            <CardContent className="p-0">
-              <div className="border-b bg-white p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-                  <Button onClick={() => fileRef.current?.click()} className="rounded-xl">
-                    <Upload className="mr-2 h-4 w-4" /> 写真を選ぶ
-                  </Button>
-                  <Button variant="outline" onClick={runAutoCheck} disabled={!image || isChecking} className="rounded-xl">
-                    {isChecking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanSearch className="mr-2 h-4 w-4" />}
-                    自動チェック
-                  </Button>
-                  <span className="text-xs text-slate-500">{message}</span>
-                </div>
-                {isChecking && (
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-slate-900 transition-all" style={{ width: `${progress}%` }} />
-                  </div>
-                )}
               </div>
+            ) : (
+              <div className="relative">
+                <img
+                  src={image}
+                  alt="preview"
+                  className="w-full rounded"
+                />
 
-              <div className="relative flex min-h-[480px] items-center justify-center bg-slate-100 p-4">
-                {!image ? (
-                  <div className="max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
-                    <CircleDot className="mx-auto h-10 w-10 text-slate-400" />
-                    <p className="mt-4 font-bold text-slate-800">写真を選んでください</p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      選んだ写真の上に、危険候補を○で重ねて表示します。
-                    </p>
-                  </div>
-                ) : (
-                  <div className="relative max-h-[650px] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-inner">
-                    <img src={image} alt="選択した写真" className="h-full w-full object-contain" />
-                    {marks.map((mark) => {
-                      const risk = riskTypes.find((r) => r.id === mark.type) || riskTypes[0];
-                      return (
-                        <div
-                          key={mark.id}
-                          className={`absolute rounded-full border-4 ${risk.color} bg-white/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.015)]`}
-                          style={{ left: `${mark.x}%`, top: `${mark.y}%`, width: `${Math.max(mark.w, 8)}%`, height: `${Math.max(mark.h, 6)}%` }}
-                          title={mark.memo}
-                        >
-                          <span className={`absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full ${risk.bg} px-3 py-1 text-xs font-bold ${risk.text} shadow-sm`}>
-                            {risk.label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                {marks.map((mark) => {
+                  const risk =
+                    riskTypes.find((r) => r.id === mark.type) ||
+                    riskTypes[0];
 
-          <div className="space-y-6">
-            <Card className="rounded-2xl border-0 shadow-sm">
-              <CardContent className="space-y-4 p-5">
-                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900"><ShieldCheck className="h-5 w-5" />チェック対象</h2>
-                <div className="grid gap-2">
-                  {riskTypes.map((risk) => {
-                    const Icon = risk.icon;
-                    const active = selectedType === risk.id;
-                    return (
-                      <button
-                        key={risk.id}
-                        onClick={() => setSelectedType(risk.id)}
-                        className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${active ? "border-slate-900 bg-white shadow-sm" : "border-slate-200 bg-slate-50 hover:bg-white"}`}
+                  return (
+                    <div
+                      key={mark.id}
+                      className={`absolute rounded-full border-4 ${risk.color}`}
+                      style={{
+                        left: `${mark.x}%`,
+                        top: `${mark.y}%`,
+                        width: `${Math.max(mark.w, 8)}%`,
+                        height: `${Math.max(mark.h, 6)}%`,
+                      }}
+                    >
+                      <div
+                        className={`absolute -top-7 left-0 rounded px-2 py-1 text-xs ${risk.bg} ${risk.text}`}
                       >
-                        <Icon className="h-5 w-5 text-slate-600" />
-                        <span className="font-medium text-slate-800">{risk.label}</span>
-                      </button>
+                        {risk.label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded bg-white p-4 shadow">
+              <h2 className="mb-3 flex items-center gap-2 text-xl font-bold">
+                <ShieldCheck className="h-5 w-5" />
+                検出された危険候補
+              </h2>
+
+              {marks.length === 0 ? (
+                <p className="text-gray-500">
+                  まだ検出結果はありません
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {marks.map((mark) => {
+                    const risk =
+                      riskTypes.find((r) => r.id === mark.type) ||
+                      riskTypes[0];
+
+                    const Icon = risk.icon;
+
+                    return (
+                      <div
+                        key={mark.id}
+                        className="flex items-start gap-3 rounded border p-3"
+                      >
+                        <Icon className="mt-1 h-5 w-5" />
+
+                        <div className="flex-1">
+                          <div className="font-bold">
+                            {risk.label}
+                          </div>
+
+                          <div className="text-sm text-gray-500">
+                            {mark.memo}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            setMarks((prev) =>
+                              prev.filter((m) => m.id !== mark.id)
+                            )
+                          }
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
-                <Button onClick={addManualMark} disabled={!image} variant="secondary" className="w-full rounded-xl">
-                  選択中の項目を手動追加
-                </Button>
-              </CardContent>
-            </Card>
+              )}
+            </div>
 
-            <Card className="rounded-2xl border-0 shadow-sm">
-              <CardContent className="space-y-4 p-5">
-                <h2 className="text-lg font-bold text-slate-900">検出された危険候補</h2>
-                {marks.length === 0 ? (
-                  <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
-                    まだ危険候補はありません。写真を選んで「自動チェック」を押してください。
-                  </p>
-                ) : (
-                  <div className="max-h-80 space-y-2 overflow-auto pr-1">
-                    {marks.map((mark) => {
-                      const risk = riskTypes.find((r) => r.id === mark.type) || riskTypes[0];
-                      const Icon = risk.icon;
-                      return (
-                        <div key={mark.id} className="flex items-start gap-3 rounded-xl border bg-white p-3">
-                          <Icon className="mt-0.5 h-5 w-5 text-slate-500" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-slate-800">{risk.label}</p>
-                            <p className="text-sm text-slate-500">{mark.memo}</p>
-                          </div>
-                          <button onClick={() => removeMark(mark.id)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="rounded bg-black p-4 text-white shadow">
+              <h2 className="mb-3 text-xl font-bold">
+                OCR読み取り結果
+              </h2>
 
-            <Card className="rounded-2xl border-0 bg-slate-900 text-white shadow-sm">
-              <CardContent className="space-y-3 p-5">
-                <h2 className="text-lg font-bold">読み取った文字</h2>
-                <p className="max-h-36 overflow-auto whitespace-pre-wrap rounded-xl bg-white/10 p-3 text-sm text-slate-300">
-                  {ocrText || "まだOCR結果はありません。"}
-                </p>
-                <p className="text-xs text-slate-400">
-                  注意：ブラウザの顔検出機能は対応環境のみ動作します。OCRは読み取り漏れがあるため、最後は人の目で確認してください。
-                </p>
-              </CardContent>
-            </Card>
+              <div className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-white/10 p-3 text-sm">
+                {ocrText || "まだOCR結果はありません"}
+              </div>
+            </div>
           </div>
         </div>
       </div>
