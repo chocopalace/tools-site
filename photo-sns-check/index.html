@@ -243,22 +243,9 @@
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              requests: [
-                {
-                  image: { content: imageBase64 },
-                  features: [
-                    { type: "FACE_DETECTION", maxResults: 50 },
-                    { type: "TEXT_DETECTION", maxResults: 100 },
-                    { type: "LANDMARK_DETECTION", maxResults: 20 },
-                    { type: "LOGO_DETECTION", maxResults: 20 }
-                  ]
-                }
-              ]
-            })
-          }
-        );
-
+body: JSON.stringify({
+  imageBase64: imageBase64
+})
         setProgress(60);
 
         const data = await response.json();
