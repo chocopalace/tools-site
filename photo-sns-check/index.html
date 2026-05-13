@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SNS写真 危険チェック</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    }
+
+    .risk-circle {
+      position: absolute;
+      border: 4px solid #ef4444;
+      border-radius: 9999px;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.015);
+    }
+
+    .risk-label {
+      position: absolute;
+      top: -32px;
+      left: 0;
+      white-space: nowrap;
+      border-radius: 9999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      background: #fee2e2;
+      color: #b91c1c;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-100 text-slate-900">
+  <main class="mx-auto max-w-6xl p-4 md:p-8">
+    <section class="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+      <div class="mb-3 inline-flex rounded-full bg-red-50 px-4 py-2 text-sm font-bold text-red-700">
+        SNS投稿前の写真リスクチェック
+      </div>
+
+      <h1 class="text-3xl font-bold md:text-5xl">
+        写真の危険箇所を<br class="hidden md:block" />投稿前にチェック
+      </h1>
+
+      <p class="mt-4 max-w-2xl text-slate-600">
+        写真に写り込んだ電話番号、住所、地名、学校名、店舗名などをOCRで読み取り、SNS投稿前に注意したい箇所を表示します。
+      </p>
+
+      <div class="mt-5 flex flex-wrap gap-3">
+        <input id="fileInput" type="file" accept="image/*" class="hidden" />
+
+        <button id="selectButton" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
+          写真を選ぶ
+        </button>
+
+        <button id="checkButton" class="rounded-xl bg-slate-900 px-5 py-3 font-bold text-white hover:bg-black disabled:opacity-40" disabled>
+          自動チェック
+        </button>
+
+        <button id="clearButton" class="rounded-xl bg-slate-200 px-5 py-3 font-bold text-slate-700 hover:bg-slate-300">
+          リセット
+        </button>
+      </div>
+
+      <div class="mt-4 rounded-2xl bg-slate-50 p-4">
+        <p id="statusText" class="text-sm font-bold text-slate-700">
+          写真を選んでください。
+        </p>
+
+        <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+          <div id="progressBar" class="h-full w-0 rounded-full bg-blue-600 transition-all"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
+      <div class="rounded-3xl bg-white p-4 shadow-sm">
+        <div id="imageArea" class="relative flex min-h-[420px] items-center justify-center rounded-2xl bg-slate-50">
+          <div id="emptyState" class="text-center text-slate-400">
+            <div class="text-5xl">◎</div>
+            <p class="mt-2 font-bold">ここに写真が表示されます</p>
+          </div>
+
+          <div id="previewWrap" class="relative hidden w-full overflow-hidden rounded-2xl">
+            <img id="previewImage" class="w-full rounded-2xl" alt="選択した写真" />
+            <div id="overlay" class="absolute inset-0"></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <div class="rounded-3xl bg-white p-5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold">危険度</h2>
+            <span id="riskBadge" class="rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-700">
+              未チェック
+            </span>
+          </div>
+
+          <p class="mt-4 text-sm text-slate-600">
+            検出された危険候補：<span id="riskCount" class="font-bold text-slate-900">0</span>件
+          </p>
+        </div>
+
+        <div class="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 class="mb-3 text-xl font-bold">検出された危険候補</h2>
+          <div id="riskList" class="space-y-2 text-sm text-slate-600">
+            まだ検出結果はありません。
+          </div>
+        </div>
+
+        <div class="rounded-3xl bg-slate-900 p-5 text-white shadow-sm">
+          <h2 class="mb-3 text-xl font-bold">OCR読み取り結果</h2>
+          <pre id="ocrText" class="max-h-64 overflow-auto whitespace-pre-wrap rounded-2xl bg-white/10 p-4 text-sm text-slate-200">まだOCR結果はありません。</pre>
+        </div>
+
+        <div class="rounded-3xl bg-yellow-50 p-5 text-sm text-yellow-900">
+          <p class="font-bold">注意</p>
+          <p class="mt-2">
+            このチェックは完璧ではありません。特に顔、車のナンバー、背景の建物や制服などは、最後に必ず人の目で確認してください。
+          </p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const selectButton = document.getElementById("selectButton");
+    const checkButton = document.getElementById("checkButton");
+    const clearButton = document.getElementById("clearButton");
+    const statusText = document.getElementById("statusText");
+    const progressBar = document.getElementById("progressBar");
+    const emptyState = document.getElementById("emptyState");
+    const previewWrap = document.getElementById("previewWrap");
+    const previewImage = document.getElementById("previewImage");
+    const overlay = document.getElementById("overlay");
+    const riskBadge = document.getElementById("riskBadge");
+    const riskCount = document.getElementById("riskCount");
+    const riskList = document.getElementById("riskList");
+    const ocrText = document.getElementById("ocrText");
+
+    let selectedFile = null;
+    let detectedRisks = [];
+
+    const locationWords = [
+      "駅", "学校", "小学校", "中学校", "高校", "幼稚園", "保育園", "病院", "医院", "クリニック", "公園", "市", "区", "町", "丁目", "番地", "交差点", "店", "支店", "営業所", "株式会社", "マンション", "アパート", "ハイツ", "ビル", "モール", "センター", "ホール"
+    ];
+
+    function getRiskTypeFromText(text) {
+      const normalized = String(text || "").replace(/\s/g, "");
+
+      if (/0\d{1,4}[-ー−]?\d{1,4}[-ー−]?\d{3,4}/.test(normalized)) {
+        return { type: "phone", label: "電話番号", color: "#eab308", bg: "#fef9c3", text: "#854d0e" };
+      }
+
+      if (/\d{3}[-ー−]?\d{4}/.test(normalized)) {
+        return { type: "address", label: "郵便番号・住所", color: "#ec4899", bg: "#fce7f3", text: "#9d174d" };
+      }
+
+      if (/(都|道|府|県|市|区|町|村|丁目|番地|号)/.test(normalized)) {
+        return { type: "address", label: "住所の可能性", color: "#ec4899", bg: "#fce7f3", text: "#9d174d" };
+      }
+
+      if (locationWords.some((word) => normalized.includes(word))) {
+        return { type: "location", label: "場所特定のヒント", color: "#3b82f6", bg: "#dbeafe", text: "#1d4ed8" };
+      }
+
+      if (/[ぁ-んァ-ヶ一-龠A-Za-z0-9]{4,}/.test(normalized)) {
+        return { type: "text", label: "文字情報", color: "#8b5cf6", bg: "#ede9fe", text: "#6d28d9" };
+      }
+
+      return null;
+    }
+
+    function setStatus(message) {
+      statusText.textContent = message;
+    }
+
+    function setProgress(value) {
+      progressBar.style.width = `${value}%`;
+    }
+
+    function resetResults() {
+      detectedRisks = [];
+      overlay.innerHTML = "";
+      riskCount.textContent = "0";
+      riskBadge.textContent = "未チェック";
+      riskBadge.className = "rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-700";
+      riskList.textContent = "まだ検出結果はありません。";
+      ocrText.textContent = "まだOCR結果はありません。";
+      setProgress(0);
+    }
+
+    function updateRiskUI() {
+      riskCount.textContent = detectedRisks.length;
+
+      if (detectedRisks.length === 0) {
+        riskBadge.textContent = "低";
+        riskBadge.className = "rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-700";
+        riskList.textContent = "危険候補は見つかりませんでした。";
+        return;
+      }
+
+      if (detectedRisks.length <= 2) {
+        riskBadge.textContent = "中";
+        riskBadge.className = "rounded-full bg-yellow-50 px-4 py-2 text-sm font-bold text-yellow-700";
+      } else {
+        riskBadge.textContent = "高";
+        riskBadge.className = "rounded-full bg-red-50 px-4 py-2 text-sm font-bold text-red-700";
+      }
+
+      riskList.innerHTML = "";
+      detectedRisks.forEach((risk) => {
+        const item = document.createElement("div");
+        item.className = "rounded-2xl border border-slate-200 bg-slate-50 p-3";
+        item.innerHTML = `
+          <div class="font-bold text-slate-900">${escapeHtml(risk.label)}</div>
+          <div class="mt-1 text-slate-600">${escapeHtml(risk.memo)}</div>
+        `;
+        riskList.appendChild(item);
+      });
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function drawRisks() {
+      overlay.innerHTML = "";
+
+      const naturalWidth = previewImage.naturalWidth || 1;
+      const naturalHeight = previewImage.naturalHeight || 1;
+
+      detectedRisks.forEach((risk) => {
+        const circle = document.createElement("div");
+        circle.className = "risk-circle";
+        circle.style.borderColor = risk.color;
+        circle.style.left = `${(risk.x / naturalWidth) * 100}%`;
+        circle.style.top = `${(risk.y / naturalHeight) * 100}%`;
+        circle.style.width = `${Math.max((risk.w / naturalWidth) * 100, 8)}%`;
+        circle.style.height = `${Math.max((risk.h / naturalHeight) * 100, 6)}%`;
+
+        const label = document.createElement("div");
+        label.className = "risk-label";
+        label.style.background = risk.bg;
+        label.style.color = risk.text;
+        label.textContent = risk.label;
+
+        circle.appendChild(label);
+        overlay.appendChild(circle);
+      });
+    }
+
+    async function runOCR() {
+      if (!selectedFile) return;
+
+      resetResults();
+      checkButton.disabled = true;
+      setStatus("OCRで画像内の文字を読み取っています…");
+      setProgress(1);
+
+      try {
+        const worker = await Tesseract.createWorker("jpn+eng", 1, {
+          logger: (m) => {
+            if (m.status === "recognizing text") {
+              setProgress(Math.round(m.progress * 100));
+            }
+          },
+        });
+
+        const result = await worker.recognize(selectedFile);
+        await worker.terminate();
+
+        const text = result.data.text || "";
+        ocrText.textContent = text.trim() || "文字は読み取れませんでした。";
+
+        const words = result.data.words || [];
+        detectedRisks = words
+          .map((word, index) => {
+            const raw = word.text || "";
+            const riskInfo = getRiskTypeFromText(raw);
+            if (!riskInfo || !word.bbox) return null;
+
+            const x = word.bbox.x0;
+            const y = word.bbox.y0;
+            const w = Math.max(word.bbox.x1 - word.bbox.x0, 20);
+            const h = Math.max(word.bbox.y1 - word.bbox.y0, 20);
+
+            return {
+              id: index,
+              ...riskInfo,
+              x,
+              y,
+              w,
+              h,
+              memo: `「${raw}」が写り込んでいる可能性があります。`,
+            };
+          })
+          .filter(Boolean)
+          .slice(0, 40);
+
+        const fullTextRisk = getRiskTypeFromText(text);
+        if (fullTextRisk && detectedRisks.length === 0) {
+          detectedRisks.push({
+            id: "full-text",
+            ...fullTextRisk,
+            x: previewImage.naturalWidth * 0.08,
+            y: previewImage.naturalHeight * 0.08,
+            w: previewImage.naturalWidth * 0.84,
+            h: previewImage.naturalHeight * 0.18,
+            memo: "画像内の文字に、個人情報や場所情報の可能性があります。",
+          });
+        }
+
+        drawRisks();
+        updateRiskUI();
+
+        if (detectedRisks.length === 0) {
+          setStatus("チェック完了。危険候補は見つかりませんでした。最後に目視でも確認してください。");
+        } else {
+          setStatus(`チェック完了。${detectedRisks.length}件の危険候補を検出しました。`);
+        }
+      } catch (error) {
+        console.error(error);
+        setStatus("エラーが発生しました。画像サイズを小さくするか、別の画像で試してください。");
+      } finally {
+        checkButton.disabled = false;
+      }
+    }
+
+    selectButton.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      selectedFile = file;
+      const url = URL.createObjectURL(file);
+      previewImage.src = url;
+      previewWrap.classList.remove("hidden");
+      emptyState.classList.add("hidden");
+      checkButton.disabled = false;
+      resetResults();
+      setStatus("写真を読み込みました。自動チェックを押してください。");
+    });
+
+    checkButton.addEventListener("click", runOCR);
+
+    clearButton.addEventListener("click", () => {
+      selectedFile = null;
+      fileInput.value = "";
+      previewImage.removeAttribute("src");
+      previewWrap.classList.add("hidden");
+      emptyState.classList.remove("hidden");
+      checkButton.disabled = true;
+      resetResults();
+      setStatus("写真を選んでください。");
+    });
+
+    window.addEventListener("resize", drawRisks);
+  </script>
+</body>
+</html>
