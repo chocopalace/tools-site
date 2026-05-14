@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDFをJPGに変換ツール</title>
+  <style>
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f6f3ee;margin:0;color:#2b2118}
+    .wrap{max-width:920px;margin:0 auto;padding:32px 18px 60px}
+    .card{background:#fff;border-radius:22px;padding:28px;box-shadow:0 12px 36px rgba(70,45,20,.12)}
+    h1{font-size:clamp(26px,4vw,42px);margin:0 0 8px}
+    p{line-height:1.8}
+    .drop{border:2px dashed #b99268;border-radius:20px;padding:28px;text-align:center;background:#fffaf4;margin:22px 0}
+    input,select,button{font-size:16px;border-radius:12px;border:1px solid #d7c3ab;padding:11px 13px}
+    input[type=file]{width:100%;box-sizing:border-box;background:#fff}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:16px 0}
+    label{font-weight:700}
+    button{background:#7b4b25;color:#fff;border:none;cursor:pointer;font-weight:700}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .status{margin-top:16px;font-weight:700;color:#5b3a1f}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px;margin-top:24px}
+    .item{background:#fffaf4;border:1px solid #ead7bf;border-radius:16px;padding:12px}
+    .item img{width:100%;border-radius:10px;border:1px solid #ddd;background:#fff}
+    .item a{display:block;text-align:center;margin-top:10px;color:#7b4b25;font-weight:700}
+    .note{font-size:14px;color:#6f6256}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>PDFをJPGに変換ツール</h1>
+      <p>PDFを選ぶだけで、各ページをJPG画像に変換します。画像は1枚ずつ保存、またはZIPでまとめて保存できます。</p><a class="back-link" href="../">← ツール一覧にもどる</a>
+
+      <div class="drop">
+        <input id="pdfFile" type="file" accept="application/pdf" />
+      </div>
+
+      <div class="row">
+        <label for="quality">画質</label>
+        <select id="quality">
+          <option value="1.5">標準</option>
+          <option value="2" selected>高画質</option>
+          <option value="3">超高画質</option>
+        </select>
+
+        <label for="jpegQuality">JPG圧縮</label>
+        <select id="jpegQuality">
+          <option value="0.85">軽め</option>
+          <option value="0.92" selected>きれい</option>
+          <option value="0.98">最高</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <button id="convertBtn">JPGに変換する</button>
+        <button id="zipBtn" disabled>ZIPでまとめて保存</button>
+      </div>
+
+      <div id="status" class="status"></div>
+      <p class="note">※PDFの内容はこのブラウザ内だけで処理されます。サーバーにはアップロードされません。</p>
+      <div id="output" class="grid"></div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('pdfFile');
+    const convertBtn = document.getElementById('convertBtn');
+    const zipBtn = document.getElementById('zipBtn');
+    const output = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+    const quality = document.getElementById('quality');
+    const jpegQuality = document.getElementById('jpegQuality');
+    let convertedImages = [];
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    function setStatus(text){ statusEl.textContent = text; }
+    function pad(num){ return String(num).padStart(3, '0'); }
+
+    convertBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if(!file){
+        setStatus('PDFファイルを選んでください。');
+        return;
+      }
+
+      output.innerHTML = '';
+      convertedImages = [];
+      zipBtn.disabled = true;
+      convertBtn.disabled = true;
+      setStatus('読み込み中...');
+
+      try{
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        const scale = Number(quality.value);
+        const jpgQ = Number(jpegQuality.value);
+        const baseName = file.name.replace(/\.pdf$/i, '') || 'converted';
+
+        for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
+          setStatus(`${pageNum} / ${pdf.numPages} ページを変換中...`);
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({scale});
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d', {alpha:false});
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({canvasContext: ctx, viewport}).promise;
+
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', jpgQ));
+          const url = URL.createObjectURL(blob);
+          const filename = `${baseName}_page_${pad(pageNum)}.jpg`;
+          convertedImages.push({blob, filename, url});
+
+          const item = document.createElement('div');
+          item.className = 'item';
+          item.innerHTML = `
+            <img src="${url}" alt="${filename}">
+            <a href="${url}" download="${filename}">ページ${pageNum}を保存</a>
+          `;
+          output.appendChild(item);
+        }
+
+        zipBtn.disabled = false;
+        setStatus(`完了しました。${pdf.numPages}枚のJPGを作成しました。`);
+      }catch(err){
+        console.error(err);
+        setStatus('変換に失敗しました。PDFが壊れている、または保護されている可能性があります。');
+      }finally{
+        convertBtn.disabled = false;
+      }
+    });
+
+    zipBtn.addEventListener('click', async () => {
+      if(convertedImages.length === 0) return;
+      zipBtn.disabled = true;
+      setStatus('ZIPを作成中...');
+      const zip = new JSZip();
+      convertedImages.forEach(img => zip.file(img.filename, img.blob));
+      const zipBlob = await zip.generateAsync({type:'blob'});
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pdf-to-jpg.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      zipBtn.disabled = false;
+      setStatus('ZIPを保存しました。');
+    });
+  </script>
+</body>
+</html>
