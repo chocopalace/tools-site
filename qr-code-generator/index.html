@@ -3,362 +3,614 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>QRコード作成ツール</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
 <style>
-body{
-    font-family:sans-serif;
-    background:#f5f5f5;
-    padding:30px;
-    color:#333;
+* {
+  box-sizing: border-box;
 }
 
-.container{
-    max-width:1000px;
-    margin:auto;
-    display:grid;
-    grid-template-columns:1fr 420px;
-    gap:30px;
+body {
+  margin: 0;
+  font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+  color: #4b3a3a;
+  background:
+    radial-gradient(circle at left top, #ffe7dc 0, transparent 35%),
+    radial-gradient(circle at right top, #e5f7ef 0, transparent 35%),
+    linear-gradient(135deg, #fff6f8, #f7fffb);
+  min-height: 100vh;
+  padding: 40px 20px;
 }
 
-.box{
-    background:#fff;
-    border-radius:20px;
-    padding:25px;
-    box-shadow:0 5px 15px rgba(0,0,0,0.05);
+.header {
+  text-align: center;
+  margin-bottom: 32px;
 }
 
-h1{
-    text-align:center;
-    margin-bottom:30px;
+.badge {
+  display: inline-block;
+  background: #fff;
+  color: #8c5a4f;
+  border: 1px solid #f3c9d4;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  box-shadow: 0 4px 14px rgba(236, 100, 140, .12);
 }
 
-label{
-    display:block;
-    font-weight:bold;
-    margin-bottom:10px;
+h1 {
+  margin: 16px 0 10px;
+  font-size: clamp(32px, 5vw, 52px);
+  letter-spacing: .04em;
+}
+
+.description {
+  color: #7b6a6a;
+}
+
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 24px;
+}
+
+.card {
+  background: rgba(255,255,255,.88);
+  border: 1px solid #f4cbd4;
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 20px 50px rgba(223, 107, 138, .12);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.icon {
+  color: #f35b86;
 }
 
 textarea,
-input,
-select{
-    width:100%;
-    padding:15px;
-    border-radius:12px;
-    border:1px solid #ddd;
-    margin-bottom:20px;
-    box-sizing:border-box;
-    font-size:16px;
+input[type="text"],
+select {
+  width: 100%;
+  border: 1px solid #f3b7c7;
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 16px;
+  background: #fff;
+  outline: none;
+  color: #3d3333;
 }
 
-.color-grid{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:10px;
-    margin-bottom:20px;
+textarea:focus,
+input:focus,
+select:focus {
+  border-color: #ef4f7f;
+  box-shadow: 0 0 0 4px rgba(239,79,127,.1);
 }
 
-.color-btn{
-    border:3px solid transparent;
-    border-radius:12px;
-    cursor:pointer;
-    overflow:hidden;
-    background:#fff;
-    padding:5px;
+textarea {
+  min-height: 130px;
+  resize: vertical;
 }
 
-.color-btn.active{
-    border-color:#000;
+.field {
+  margin-bottom: 28px;
 }
 
-.color-preview{
-    height:45px;
-    border-radius:8px;
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
-.position-buttons{
-    display:flex;
-    gap:10px;
+.position-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
-.position-buttons button{
-    flex:1;
-    padding:14px;
-    border:none;
-    border-radius:12px;
-    background:#eee;
-    cursor:pointer;
-    font-weight:bold;
+button {
+  font-family: inherit;
 }
 
-.position-buttons button.active{
-    background:#000;
-    color:#fff;
+.position-buttons button,
+.color-btn,
+.download-btn,
+.copy-btn {
+  cursor: pointer;
+  transition: .2s;
 }
 
-.preview-area{
-    text-align:center;
+.position-buttons button {
+  border: 1px solid #f3b7c7;
+  background: #fff;
+  border-radius: 14px;
+  padding: 15px;
+  font-weight: 700;
+  color: #684f4f;
 }
 
-#finalCanvas{
-    max-width:100%;
-    background:#fff;
-    border-radius:20px;
+.position-buttons button.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #f86f95, #eb3f75);
 }
 
-.download-btn{
-    width:100%;
-    padding:16px;
-    border:none;
-    border-radius:15px;
-    background:#000;
-    color:#fff;
-    font-size:16px;
-    font-weight:bold;
-    cursor:pointer;
-    margin-top:20px;
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
 }
 
-@media(max-width:768px){
-    .container{
-        grid-template-columns:1fr;
-    }
+.color-btn {
+  background: #fff;
+  border: 1px solid #ead7dc;
+  border-radius: 16px;
+  padding: 12px;
+  text-align: center;
+  color: #4c3d3d;
+  min-height: 104px;
+}
+
+.color-btn.active {
+  border-color: #ef4f7f;
+  box-shadow: 0 0 0 3px rgba(239,79,127,.15);
+}
+
+.color-sample {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  margin: 0 auto 9px;
+  border: 1px solid #ddd;
+}
+
+.note {
+  margin-top: 24px;
+  background: #fff4f6;
+  border: 1px solid #f7d5dd;
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 14px;
+  color: #7a5a61;
+  line-height: 1.8;
+}
+
+.preview-title {
+  font-weight: 700;
+  margin-bottom: 22px;
+}
+
+.preview-box {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0 28px;
+}
+
+#finalCanvas {
+  max-width: 100%;
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(0,0,0,.13);
+}
+
+.download-btn {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 18px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #f86f95, #eb3f75);
+  margin-bottom: 16px;
+}
+
+.copy-btn {
+  width: 100%;
+  border: 1px solid #ead3d8;
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #5c4444;
+  background: #fff;
+}
+
+.footer-note {
+  margin-top: 28px;
+  background: #fff4f6;
+  border-radius: 16px;
+  padding: 18px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.counter {
+  text-align: right;
+  color: #999;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .color-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>
 </head>
 
 <body>
 
-<h1>QRコード作成ツール</h1>
-
-<div class="container">
-
-<div class="box">
-
-<label>QRコードにしたい文字列</label>
-<textarea id="qrText" rows="5" placeholder="https://example.com"></textarea>
-
-<label>表示テキスト</label>
-<input type="text" id="displayText" placeholder="表示する文字">
-
-<label>表示テキストの色</label>
-<select id="textColor">
-    <option value="#000000">黒</option>
-    <option value="#666666">グレー</option>
-    <option value="#b98b8b">くすみピンク</option>
-    <option value="#7f9aa8">くすみブルー</option>
-    <option value="#8fa68e">くすみグリーン</option>
-    <option value="#ffffff">白</option>
-</select>
-
-<label>表示位置</label>
-<div class="position-buttons">
-    <button id="topBtn">上</button>
-    <button id="bottomBtn" class="active">下</button>
+<div class="header">
+  <div class="badge">✅ 誰でも簡単・無料で使える</div>
+  <h1>QRコード作成ツール</h1>
+  <p class="description">URLやテキストを入力して、オリジナルのQRコードを作成！</p>
 </div>
 
-<br>
+<div class="wrap">
 
-<label>QRコードカラー</label>
+  <div class="card">
 
-<div class="color-grid">
+    <div class="field">
+      <div class="label"><span class="icon">▣</span> QRコードにしたい文字列</div>
+      <textarea id="qrText" maxlength="2000" placeholder="https://example.com"></textarea>
+      <div class="counter"><span id="count">0</span>/2000</div>
+    </div>
 
-<div class="color-btn active" data-color="#000000">
-<div class="color-preview" style="background:#000000;"></div>
-</div>
+    <div class="field">
+      <div class="label"><span class="icon">▤</span> 表示テキスト（任意）</div>
+      <input type="text" id="displayText" placeholder="例）公式サイトはこちら">
+    </div>
 
-<div class="color-btn" data-color="#666666">
-<div class="color-preview" style="background:#666666;"></div>
-</div>
+    <div class="row field">
+      <div>
+        <div class="label"><span class="icon">●</span> 表示テキストの色</div>
+        <input type="text" id="textColor" value="#333333">
+      </div>
 
-<div class="color-btn" data-color="#b98b8b">
-<div class="color-preview" style="background:#b98b8b;"></div>
-</div>
+      <div>
+        <div class="label"><span class="icon">↔</span> 表示位置</div>
+        <div class="position-buttons">
+          <button id="topBtn">上に表示</button>
+          <button id="bottomBtn" class="active">下に表示</button>
+        </div>
+      </div>
+    </div>
 
-<div class="color-btn" data-color="#7f9aa8">
-<div class="color-preview" style="background:#7f9aa8;"></div>
-</div>
+    <div class="field">
+      <div class="label"><span class="icon">◎</span> QRコードのカラー</div>
 
-<div class="color-btn" data-color="#8fa68e">
-<div class="color-preview" style="background:#8fa68e;"></div>
-</div>
+      <div class="color-grid">
+        <button class="color-btn active" data-color="black">
+          <div class="color-sample" style="background:#000;"></div>黒
+        </button>
 
-<div class="color-btn" data-color="#06c755">
-<div class="color-preview" style="background:#06c755;"></div>
-</div>
+        <button class="color-btn" data-color="gray">
+          <div class="color-sample" style="background:#555;"></div>グレー
+        </button>
 
-<div class="color-btn" data-color="instagram">
-<div class="color-preview" style="background:linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf);"></div>
-</div>
+        <button class="color-btn" data-color="dustyPink">
+          <div class="color-sample" style="background:#d49aa5;"></div>くすみピンク
+        </button>
 
-<div class="color-btn" data-color="#ffffff">
-<div class="color-preview" style="background:#ffffff;border:1px solid #ddd;"></div>
-</div>
+        <button class="color-btn" data-color="dustyBlue">
+          <div class="color-sample" style="background:#7fa3ad;"></div>くすみブルー
+        </button>
 
-</div>
+        <button class="color-btn" data-color="dustyGreen">
+          <div class="color-sample" style="background:#79a887;"></div>くすみグリーン
+        </button>
 
-</div>
+        <button class="color-btn" data-color="instagram">
+          <div class="color-sample" style="background:linear-gradient(135deg,#ff7a18,#ff2e8a,#9b5cff);"></div>
+          インスタ風<br>グラデーション
+        </button>
 
-<div class="box preview-area">
+        <button class="color-btn" data-color="line">
+          <div class="color-sample" style="background:#06c755;"></div>LINE風<br>グリーン
+        </button>
 
-<canvas id="finalCanvas"></canvas>
+        <button class="color-btn" data-color="white">
+          <div class="color-sample" style="background:#fff;"></div>白
+        </button>
+      </div>
 
-<button class="download-btn" onclick="downloadQR()">
-PNGでダウンロード
-</button>
+      <div class="note">
+        💡 白を選択した場合は、読み取りやすいように背景を濃いグレーにします。<br>
+        インスタ風グラデーションは、黒いQRコードをベースに色を重ねています。
+      </div>
+    </div>
 
-</div>
+  </div>
+
+  <div class="card">
+    <div class="preview-title"><span class="icon">◎</span> プレビュー</div>
+
+    <div class="preview-box">
+      <canvas id="finalCanvas"></canvas>
+    </div>
+
+    <button class="download-btn" onclick="downloadQR()">↓ 画像をダウンロード（PNG）</button>
+    <button class="copy-btn" onclick="copyQR()">□ クリップボードにコピー</button>
+
+    <div class="footer-note">
+      <strong>ⓘ ご利用について</strong><br>
+      作成したQRコードは、商用・個人問わずご自由にご利用いただけます。<br>
+      ご利用前にスマホで読み取り確認してください。
+    </div>
+  </div>
 
 </div>
 
 <script>
-
-let selectedColor = "#000000";
-let textPosition = "bottom";
-
 const qrText = document.getElementById("qrText");
 const displayText = document.getElementById("displayText");
 const textColor = document.getElementById("textColor");
+const count = document.getElementById("count");
+const canvas = document.getElementById("finalCanvas");
+const ctx = canvas.getContext("2d");
 
-document.querySelectorAll(".color-btn").forEach(btn=>{
-    btn.addEventListener("click",()=>{
+let selectedColor = "black";
+let textPosition = "bottom";
 
-        document.querySelectorAll(".color-btn").forEach(b=>{
-            b.classList.remove("active");
-        });
+const colors = {
+  black: "#000000",
+  gray: "#555555",
+  dustyPink: "#d49aa5",
+  dustyBlue: "#7fa3ad",
+  dustyGreen: "#79a887",
+  line: "#06c755",
+  white: "#ffffff"
+};
 
-        btn.classList.add("active");
-        selectedColor = btn.dataset.color;
+qrText.value = "https://example.com";
+displayText.value = "公式サイトはこちら";
 
-        generateQR();
-    });
-});
-
-document.getElementById("topBtn").addEventListener("click",()=>{
-    textPosition = "top";
-
-    document.getElementById("topBtn").classList.add("active");
-    document.getElementById("bottomBtn").classList.remove("active");
-
+document.querySelectorAll(".color-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".color-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedColor = btn.dataset.color;
     generateQR();
+  });
 });
 
-document.getElementById("bottomBtn").addEventListener("click",()=>{
-    textPosition = "bottom";
-
-    document.getElementById("bottomBtn").classList.add("active");
-    document.getElementById("topBtn").classList.remove("active");
-
-    generateQR();
+document.getElementById("topBtn").addEventListener("click", () => {
+  textPosition = "top";
+  topBtn.classList.add("active");
+  bottomBtn.classList.remove("active");
+  generateQR();
 });
 
-qrText.addEventListener("input",generateQR);
-displayText.addEventListener("input",generateQR);
-textColor.addEventListener("change",generateQR);
+document.getElementById("bottomBtn").addEventListener("click", () => {
+  textPosition = "bottom";
+  bottomBtn.classList.add("active");
+  topBtn.classList.remove("active");
+  generateQR();
+});
 
-async function generateQR(){
+qrText.addEventListener("input", () => {
+  count.textContent = qrText.value.length;
+  generateQR();
+});
 
-    const text = qrText.value.trim();
+displayText.addEventListener("input", generateQR);
+textColor.addEventListener("input", generateQR);
 
-    if(!text){
-        return;
+function wrapText(ctx, text, maxWidth) {
+  const chars = Array.from(text);
+  const lines = [];
+  let line = "";
+
+  chars.forEach(char => {
+    const testLine = line + char;
+    if (ctx.measureText(testLine).width > maxWidth && line !== "") {
+      lines.push(line);
+      line = char;
+    } else {
+      line = testLine;
     }
+  });
 
-    const qrCanvas = document.createElement("canvas");
+  if (line) lines.push(line);
+  return lines.slice(0, 3);
+}
 
-    const size = 350;
+async function createQRCanvas(text) {
+  const tempCanvas = document.createElement("canvas");
 
-    const qr = new QRCode(qrCanvas,{
-        text:text,
-        width:size,
-        height:size,
-        colorDark:selectedColor === "instagram" ? "#000000" : selectedColor,
-        colorLight:"#ffffff",
-        correctLevel:QRCode.CorrectLevel.H
-    });
-
-    await new Promise(resolve=>setTimeout(resolve,300));
-
-    const qrImg = qrCanvas.querySelector("img") || qrCanvas.querySelector("canvas");
-
-    const canvas = document.getElementById("finalCanvas");
-
-    const ctx = canvas.getContext("2d");
-
-    canvas.width = 420;
-    canvas.height = 520;
-
-    ctx.fillStyle="#ffffff";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    let qrY = 80;
-
-    if(textPosition === "top"){
-        qrY = 130;
+  await QRCode.toCanvas(tempCanvas, text, {
+    width: 330,
+    margin: 2,
+    errorCorrectionLevel: "H",
+    color: {
+      dark: "#000000",
+      light: "#ffffff"
     }
+  });
 
-    if(selectedColor === "instagram"){
+  return tempCanvas;
+}
 
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = size;
-        tempCanvas.height = size;
+function drawColoredQR(sourceCanvas, x, y, size) {
+  const temp = document.createElement("canvas");
+  temp.width = size;
+  temp.height = size;
 
-        const tempCtx = tempCanvas.getContext("2d");
-        tempCtx.drawImage(qrImg,0,0,size,size);
+  const tempCtx = temp.getContext("2d");
+  tempCtx.drawImage(sourceCanvas, 0, 0, size, size);
 
-        const gradient = ctx.createLinearGradient(0,0,size,size);
+  const imageData = tempCtx.getImageData(0, 0, size, size);
+  const data = imageData.data;
 
-        gradient.addColorStop(0,"#feda75");
-        gradient.addColorStop(0.3,"#fa7e1e");
-        gradient.addColorStop(0.6,"#d62976");
-        gradient.addColorStop(1,"#962fbf");
+  let gradient = null;
 
-        ctx.drawImage(tempCanvas,35,qrY,size,size);
+  if (selectedColor === "instagram") {
+    gradient = ctx.createLinearGradient(x, y, x + size, y + size);
+    gradient.addColorStop(0, "#ff7a18");
+    gradient.addColorStop(0.45, "#ff2e8a");
+    gradient.addColorStop(1, "#9b5cff");
+  }
 
-        ctx.globalCompositeOperation = "source-atop";
-        ctx.fillStyle = gradient;
-        ctx.fillRect(35,qrY,size,size);
-        ctx.globalCompositeOperation = "source-over";
+  const solidColor = colors[selectedColor] || "#000000";
 
-    }else{
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const index = (py * size + px) * 4;
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
 
-        ctx.drawImage(qrImg,35,qrY,size,size);
+      const isDark = r < 128 && g < 128 && b < 128;
 
+      if (!isDark) {
+        data[index + 3] = 0;
+      } else if (selectedColor !== "instagram") {
+        const rgb = hexToRgb(solidColor);
+        data[index] = rgb.r;
+        data[index + 1] = rgb.g;
+        data[index + 2] = rgb.b;
+        data[index + 3] = 255;
+      }
     }
+  }
 
-    ctx.fillStyle = textColor.value;
-    ctx.font = "bold 28px sans-serif";
+  tempCtx.putImageData(imageData, 0, 0);
+
+  if (selectedColor === "instagram") {
+    const mask = document.createElement("canvas");
+    mask.width = size;
+    mask.height = size;
+
+    const maskCtx = mask.getContext("2d");
+    maskCtx.fillStyle = gradient;
+    maskCtx.fillRect(0, 0, size, size);
+    maskCtx.globalCompositeOperation = "destination-in";
+    maskCtx.drawImage(temp, 0, 0);
+
+    ctx.drawImage(mask, x, y);
+  } else {
+    ctx.drawImage(temp, x, y);
+  }
+}
+
+async function generateQR() {
+  const text = qrText.value.trim();
+
+  canvas.width = 420;
+  canvas.height = 520;
+
+  const backgroundColor = selectedColor === "white" ? "#333333" : "#ffffff";
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = backgroundColor;
+  roundedRect(ctx, 0, 0, canvas.width, canvas.height, 18);
+  ctx.fill();
+
+  if (!text) {
+    ctx.fillStyle = "#999";
+    ctx.font = "18px sans-serif";
     ctx.textAlign = "center";
+    ctx.fillText("文字列を入力してください", canvas.width / 2, canvas.height / 2);
+    return;
+  }
 
-    if(displayText.value){
+  const qrCanvas = await createQRCanvas(text);
 
-        if(textPosition === "top"){
-            ctx.fillText(displayText.value,210,60);
-        }else{
-            ctx.fillText(displayText.value,210,470);
-        }
+  const qrSize = 330;
+  const qrX = 45;
+  const qrY = textPosition === "top" && displayText.value.trim() ? 135 : 55;
 
-    }
+  drawColoredQR(qrCanvas, qrX, qrY, qrSize);
 
+  if (displayText.value.trim()) {
+    ctx.fillStyle = textColor.value || "#333333";
+    ctx.font = "bold 26px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const lines = wrapText(ctx, displayText.value.trim(), 360);
+    const lineHeight = 34;
+    const baseY = textPosition === "top" ? 62 : 430;
+    const startY = baseY - ((lines.length - 1) * lineHeight / 2);
+
+    lines.forEach((line, i) => {
+      ctx.fillText(line, canvas.width / 2, startY + i * lineHeight);
+    });
+  }
 }
 
-function downloadQR(){
-
-    const canvas = document.getElementById("finalCanvas");
-
-    const link = document.createElement("a");
-
-    link.download = "qr-code.png";
-
-    link.href = canvas.toDataURL();
-
-    link.click();
-
+function roundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
 }
 
+function hexToRgb(hex) {
+  hex = hex.replace("#", "");
+
+  if (hex.length === 3) {
+    hex = hex.split("").map(char => char + char).join("");
+  }
+
+  const num = parseInt(hex, 16);
+
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+
+function downloadQR() {
+  const link = document.createElement("a");
+  link.download = "qr-code.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+async function copyQR() {
+  try {
+    canvas.toBlob(async blob => {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob })
+      ]);
+      alert("QRコード画像をコピーしました");
+    });
+  } catch (e) {
+    alert("このブラウザでは画像コピーに対応していません。ダウンロードをご利用ください。");
+  }
+}
+
+count.textContent = qrText.value.length;
+generateQR();
 </script>
 
 </body>
