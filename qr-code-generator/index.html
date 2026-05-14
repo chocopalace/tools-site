@@ -93,6 +93,49 @@ button {
   border: none;
 }
 
+.text-color-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.text-color-btn {
+  background: #fff;
+  border: 1px solid #ead5da;
+  border-radius: 12px;
+  padding: 8px;
+  height: 48px;
+}
+
+.text-color-btn.active {
+  border-color: #ef4f7f;
+  box-shadow: 0 0 0 3px rgba(239,79,127,.15);
+}
+
+.text-color-sample {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  margin: auto;
+  border: 1px solid #ddd;
+}
+
+.custom-color {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.custom-color input {
+  width: 54px;
+  height: 40px;
+  padding: 4px;
+  border-radius: 10px;
+}
+
 .color-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -154,7 +197,9 @@ button {
 }
 
 #qrHidden {
-  display: none;
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
 }
 
 @media(max-width: 900px) {
@@ -189,7 +234,45 @@ button {
     <div class="row">
       <div>
         <label>表示テキストの色</label>
-        <input type="color" id="textColor" value="#333333">
+
+        <div class="text-color-grid">
+          <button type="button" class="text-color-btn active" data-text-color="#000000">
+            <div class="text-color-sample" style="background:#000000;"></div>
+          </button>
+
+          <button type="button" class="text-color-btn" data-text-color="#555555">
+            <div class="text-color-sample" style="background:#555555;"></div>
+          </button>
+
+          <button type="button" class="text-color-btn" data-text-color="#d49aa5">
+            <div class="text-color-sample" style="background:#d49aa5;"></div>
+          </button>
+
+          <button type="button" class="text-color-btn" data-text-color="#7fa3ad">
+            <div class="text-color-sample" style="background:#7fa3ad;"></div>
+          </button>
+
+          <button type="button" class="text-color-btn" data-text-color="#79a887">
+            <div class="text-color-sample" style="background:#79a887;"></div>
+          </button>
+
+          <button type="button" class="text-color-btn" data-text-color="instagram">
+            <div class="text-color-sample" style="background:linear-gradient(135deg,#ff7a18,#ff2e8a,#9b5cff);"></div>
+          </button>
+
+          <button type="button" class="text-color-btn" data-text-color="#06c755">
+            <div class="text-color-sample" style="background:#06c755;"></div>
+          </button>
+
+          <button type="button" class="text-color-btn" data-text-color="#ffffff">
+            <div class="text-color-sample" style="background:#ffffff;"></div>
+          </button>
+        </div>
+
+        <div class="custom-color">
+          自由色
+          <input type="color" id="textColorPicker" value="#000000">
+        </div>
       </div>
 
       <div>
@@ -256,11 +339,12 @@ button {
 
 <script>
 let selectedColor = "black";
+let selectedTextColor = "#000000";
 let textPosition = "bottom";
 
 const qrText = document.getElementById("qrText");
 const displayText = document.getElementById("displayText");
-const textColor = document.getElementById("textColor");
+const textColorPicker = document.getElementById("textColorPicker");
 const finalCanvas = document.getElementById("finalCanvas");
 const ctx = finalCanvas.getContext("2d");
 const qrHidden = document.getElementById("qrHidden");
@@ -309,7 +393,7 @@ function generateQR() {
     const qrCanvas = qrHidden.querySelector("canvas");
 
     if (!qrCanvas) {
-      alert("QRコードを生成できませんでした。ライブラリの読み込みを確認してください。");
+      alert("QRコードを生成できませんでした。");
       return;
     }
 
@@ -384,10 +468,18 @@ function drawFinal(qrCanvas) {
 
 function drawDisplayText() {
   const label = displayText.value.trim();
-
   if (!label) return;
 
-  ctx.fillStyle = textColor.value;
+  if (selectedTextColor === "instagram") {
+    const gradient = ctx.createLinearGradient(0, 0, finalCanvas.width, 0);
+    gradient.addColorStop(0, "#ff7a18");
+    gradient.addColorStop(0.45, "#ff2e8a");
+    gradient.addColorStop(1, "#9b5cff");
+    ctx.fillStyle = gradient;
+  } else {
+    ctx.fillStyle = selectedTextColor;
+  }
+
   ctx.font = "bold 26px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -423,6 +515,27 @@ document.querySelectorAll(".color-btn").forEach(btn => {
   });
 });
 
+document.querySelectorAll(".text-color-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    document.querySelectorAll(".text-color-btn").forEach(b => b.classList.remove("active"));
+    this.classList.add("active");
+
+    selectedTextColor = this.dataset.textColor;
+
+    if (selectedTextColor !== "instagram") {
+      textColorPicker.value = selectedTextColor;
+    }
+
+    generateQR();
+  });
+});
+
+textColorPicker.addEventListener("input", function() {
+  selectedTextColor = this.value;
+  document.querySelectorAll(".text-color-btn").forEach(b => b.classList.remove("active"));
+  generateQR();
+});
+
 document.getElementById("topBtn").addEventListener("click", function() {
   textPosition = "top";
   this.classList.add("active");
@@ -439,7 +552,6 @@ document.getElementById("bottomBtn").addEventListener("click", function() {
 
 qrText.addEventListener("input", generateQR);
 displayText.addEventListener("input", generateQR);
-textColor.addEventListener("input", generateQR);
 
 window.addEventListener("load", generateQR);
 </script>
