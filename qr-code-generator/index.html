@@ -1,306 +1,365 @@
-import React, { useMemo, useRef, useState } from "react";
-import QRCode from "qrcode";
-import { Download, QrCode, Type, Palette } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-const colorPresets = [
-  { id: "black", label: "黒", type: "solid", dark: "#111111", light: "#ffffff" },
-  { id: "white", label: "白", type: "solid", dark: "#ffffff", light: "#111111" },
-  { id: "gray", label: "グレー", type: "solid", dark: "#666666", light: "#ffffff" },
-  { id: "dustyPink", label: "くすみピンク", type: "solid", dark: "#b98b8b", light: "#ffffff" },
-  { id: "dustyBlue", label: "くすみブルー", type: "solid", dark: "#7f9aa8", light: "#ffffff" },
-  { id: "dustyGreen", label: "くすみグリーン", type: "solid", dark: "#8fa68e", light: "#ffffff" },
-  { id: "instagram", label: "インスタ風", type: "gradient", dark: "#e1306c", light: "#ffffff", colors: ["#feda75", "#fa7e1e", "#d62976", "#962fbf"] },
-  { id: "line", label: "LINE風", type: "solid", dark: "#06c755", light: "#ffffff" },
-];
+<title>QRコード作成ツール</title>
 
-const textColors = [
-  { label: "黒", value: "#111111" },
-  { label: "白", value: "#ffffff" },
-  { label: "グレー", value: "#666666" },
-  { label: "くすみピンク", value: "#b98b8b" },
-  { label: "くすみブルー", value: "#7f9aa8" },
-  { label: "くすみグリーン", value: "#8fa68e" },
-  { label: "LINE風グリーン", value: "#06c755" },
-  { label: "インスタ風ピンク", value: "#e1306c" },
-];
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-function drawRoundedRect(ctx, x, y, width, height, radius) {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
+<style>
+body{
+    font-family:sans-serif;
+    background:#f5f5f5;
+    padding:30px;
+    color:#333;
 }
 
-function wrapText(ctx, text, maxWidth) {
-  const chars = Array.from(text);
-  const lines = [];
-  let line = "";
+.container{
+    max-width:1000px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:1fr 420px;
+    gap:30px;
+}
 
-  chars.forEach((char) => {
-    const test = line + char;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = char;
-    } else {
-      line = test;
+.box{
+    background:#fff;
+    border-radius:20px;
+    padding:25px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
+
+h1{
+    text-align:center;
+    margin-bottom:30px;
+}
+
+label{
+    display:block;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+textarea,
+input,
+select{
+    width:100%;
+    padding:15px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    margin-bottom:20px;
+    box-sizing:border-box;
+    font-size:16px;
+}
+
+.color-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.color-btn{
+    border:3px solid transparent;
+    border-radius:12px;
+    cursor:pointer;
+    overflow:hidden;
+    background:#fff;
+    padding:5px;
+}
+
+.color-btn.active{
+    border-color:#000;
+}
+
+.color-preview{
+    height:45px;
+    border-radius:8px;
+}
+
+.position-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.position-buttons button{
+    flex:1;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:#eee;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.position-buttons button.active{
+    background:#000;
+    color:#fff;
+}
+
+.preview-area{
+    text-align:center;
+}
+
+#finalCanvas{
+    max-width:100%;
+    background:#fff;
+    border-radius:20px;
+}
+
+.download-btn{
+    width:100%;
+    padding:16px;
+    border:none;
+    border-radius:15px;
+    background:#000;
+    color:#fff;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+    margin-top:20px;
+}
+
+@media(max-width:768px){
+    .container{
+        grid-template-columns:1fr;
     }
-  });
-
-  if (line) lines.push(line);
-  return lines.slice(0, 3);
 }
+</style>
+</head>
 
-export default function QrCodeGeneratorTool() {
-  const [qrText, setQrText] = useState("https://lycoris-kyoto.com/shop");
-  const [displayText, setDisplayText] = useState("音楽家のためのハーブティー");
-  const [textColor, setTextColor] = useState("#111111");
-  const [textPosition, setTextPosition] = useState("bottom");
-  const [qrColor, setQrColor] = useState("black");
-  const canvasRef = useRef(null);
+<body>
 
-  const selectedPreset = useMemo(
-    () => colorPresets.find((preset) => preset.id === qrColor) ?? colorPresets[0],
-    [qrColor]
-  );
+<h1>QRコード作成ツール</h1>
 
-  const generateCanvas = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !qrText.trim()) return;
+<div class="container">
 
-    const size = 360;
-    const padding = 28;
-    const textAreaHeight = displayText.trim() ? 78 : 0;
-    const width = size + padding * 2;
-    const height = size + padding * 2 + textAreaHeight;
-    const qrY = textPosition === "top" && displayText.trim() ? padding + textAreaHeight : padding;
-    const textY = textPosition === "top" ? padding + 20 : qrY + size + 38;
+<div class="box">
 
-    canvas.width = width * 2;
-    canvas.height = height * 2;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+<label>QRコードにしたい文字列</label>
+<textarea id="qrText" rows="5" placeholder="https://example.com"></textarea>
 
-    const ctx = canvas.getContext("2d");
-    ctx.scale(2, 2);
-    ctx.clearRect(0, 0, width, height);
+<label>表示テキスト</label>
+<input type="text" id="displayText" placeholder="表示する文字">
 
-    ctx.fillStyle = "#ffffff";
-    drawRoundedRect(ctx, 0, 0, width, height, 24);
-    ctx.fill();
+<label>表示テキストの色</label>
+<select id="textColor">
+    <option value="#000000">黒</option>
+    <option value="#666666">グレー</option>
+    <option value="#b98b8b">くすみピンク</option>
+    <option value="#7f9aa8">くすみブルー</option>
+    <option value="#8fa68e">くすみグリーン</option>
+    <option value="#ffffff">白</option>
+</select>
 
-    const tempCanvas = document.createElement("canvas");
-    await QRCode.toCanvas(tempCanvas, qrText.trim(), {
-      width: size,
-      margin: 2,
-      errorCorrectionLevel: "H",
-      color: {
-        dark: selectedPreset.type === "gradient" ? "#111111" : selectedPreset.dark,
-        light: selectedPreset.light,
-      },
+<label>表示位置</label>
+<div class="position-buttons">
+    <button id="topBtn">上</button>
+    <button id="bottomBtn" class="active">下</button>
+</div>
+
+<br>
+
+<label>QRコードカラー</label>
+
+<div class="color-grid">
+
+<div class="color-btn active" data-color="#000000">
+<div class="color-preview" style="background:#000000;"></div>
+</div>
+
+<div class="color-btn" data-color="#666666">
+<div class="color-preview" style="background:#666666;"></div>
+</div>
+
+<div class="color-btn" data-color="#b98b8b">
+<div class="color-preview" style="background:#b98b8b;"></div>
+</div>
+
+<div class="color-btn" data-color="#7f9aa8">
+<div class="color-preview" style="background:#7f9aa8;"></div>
+</div>
+
+<div class="color-btn" data-color="#8fa68e">
+<div class="color-preview" style="background:#8fa68e;"></div>
+</div>
+
+<div class="color-btn" data-color="#06c755">
+<div class="color-preview" style="background:#06c755;"></div>
+</div>
+
+<div class="color-btn" data-color="instagram">
+<div class="color-preview" style="background:linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf);"></div>
+</div>
+
+<div class="color-btn" data-color="#ffffff">
+<div class="color-preview" style="background:#ffffff;border:1px solid #ddd;"></div>
+</div>
+
+</div>
+
+</div>
+
+<div class="box preview-area">
+
+<canvas id="finalCanvas"></canvas>
+
+<button class="download-btn" onclick="downloadQR()">
+PNGでダウンロード
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+let selectedColor = "#000000";
+let textPosition = "bottom";
+
+const qrText = document.getElementById("qrText");
+const displayText = document.getElementById("displayText");
+const textColor = document.getElementById("textColor");
+
+document.querySelectorAll(".color-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+
+        document.querySelectorAll(".color-btn").forEach(b=>{
+            b.classList.remove("active");
+        });
+
+        btn.classList.add("active");
+        selectedColor = btn.dataset.color;
+
+        generateQR();
+    });
+});
+
+document.getElementById("topBtn").addEventListener("click",()=>{
+    textPosition = "top";
+
+    document.getElementById("topBtn").classList.add("active");
+    document.getElementById("bottomBtn").classList.remove("active");
+
+    generateQR();
+});
+
+document.getElementById("bottomBtn").addEventListener("click",()=>{
+    textPosition = "bottom";
+
+    document.getElementById("bottomBtn").classList.add("active");
+    document.getElementById("topBtn").classList.remove("active");
+
+    generateQR();
+});
+
+qrText.addEventListener("input",generateQR);
+displayText.addEventListener("input",generateQR);
+textColor.addEventListener("change",generateQR);
+
+async function generateQR(){
+
+    const text = qrText.value.trim();
+
+    if(!text){
+        return;
+    }
+
+    const qrCanvas = document.createElement("canvas");
+
+    const size = 350;
+
+    const qr = new QRCode(qrCanvas,{
+        text:text,
+        width:size,
+        height:size,
+        colorDark:selectedColor === "instagram" ? "#000000" : selectedColor,
+        colorLight:"#ffffff",
+        correctLevel:QRCode.CorrectLevel.H
     });
 
-    if (selectedPreset.type === "gradient") {
-      const maskCanvas = document.createElement("canvas");
-      maskCanvas.width = size;
-      maskCanvas.height = size;
-      const maskCtx = maskCanvas.getContext("2d");
-      maskCtx.drawImage(tempCanvas, 0, 0);
+    await new Promise(resolve=>setTimeout(resolve,300));
 
-      ctx.drawImage(tempCanvas, padding, qrY);
-      const imageData = maskCtx.getImageData(0, 0, size, size);
-      const gradientCanvas = document.createElement("canvas");
-      gradientCanvas.width = size;
-      gradientCanvas.height = size;
-      const gradientCtx = gradientCanvas.getContext("2d");
-      const gradient = gradientCtx.createLinearGradient(0, 0, size, size);
-      selectedPreset.colors.forEach((color, index) => {
-        gradient.addColorStop(index / (selectedPreset.colors.length - 1), color);
-      });
-      gradientCtx.fillStyle = gradient;
-      gradientCtx.fillRect(0, 0, size, size);
+    const qrImg = qrCanvas.querySelector("img") || qrCanvas.querySelector("canvas");
 
-      const gradientData = gradientCtx.getImageData(0, 0, size, size);
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        const r = imageData.data[i];
-        const g = imageData.data[i + 1];
-        const b = imageData.data[i + 2];
-        const isDark = r < 120 && g < 120 && b < 120;
-        if (!isDark) {
-          gradientData.data[i + 3] = 0;
+    const canvas = document.getElementById("finalCanvas");
+
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = 420;
+    canvas.height = 520;
+
+    ctx.fillStyle="#ffffff";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    let qrY = 80;
+
+    if(textPosition === "top"){
+        qrY = 130;
+    }
+
+    if(selectedColor === "instagram"){
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = size;
+        tempCanvas.height = size;
+
+        const tempCtx = tempCanvas.getContext("2d");
+        tempCtx.drawImage(qrImg,0,0,size,size);
+
+        const gradient = ctx.createLinearGradient(0,0,size,size);
+
+        gradient.addColorStop(0,"#feda75");
+        gradient.addColorStop(0.3,"#fa7e1e");
+        gradient.addColorStop(0.6,"#d62976");
+        gradient.addColorStop(1,"#962fbf");
+
+        ctx.drawImage(tempCanvas,35,qrY,size,size);
+
+        ctx.globalCompositeOperation = "source-atop";
+        ctx.fillStyle = gradient;
+        ctx.fillRect(35,qrY,size,size);
+        ctx.globalCompositeOperation = "source-over";
+
+    }else{
+
+        ctx.drawImage(qrImg,35,qrY,size,size);
+
+    }
+
+    ctx.fillStyle = textColor.value;
+    ctx.font = "bold 28px sans-serif";
+    ctx.textAlign = "center";
+
+    if(displayText.value){
+
+        if(textPosition === "top"){
+            ctx.fillText(displayText.value,210,60);
+        }else{
+            ctx.fillText(displayText.value,210,470);
         }
-      }
-      gradientCtx.putImageData(gradientData, 0, 0);
-      ctx.drawImage(gradientCanvas, padding, qrY);
-    } else {
-      ctx.drawImage(tempCanvas, padding, qrY);
+
     }
 
-    if (displayText.trim()) {
-      ctx.font = "bold 22px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-      ctx.fillStyle = textColor;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const lines = wrapText(ctx, displayText.trim(), width - padding * 2);
-      const lineHeight = 28;
-      const startY = textY - ((lines.length - 1) * lineHeight) / 2;
-      lines.forEach((line, index) => {
-        ctx.fillText(line, width / 2, startY + index * lineHeight);
-      });
-    }
-  };
-
-  React.useEffect(() => {
-    generateCanvas();
-  }, [qrText, displayText, textColor, textPosition, qrColor]);
-
-  const handleDownload = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = "qr-code.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
-
-  return (
-    <div className="min-h-screen bg-stone-50 p-4 md:p-8 text-stone-900">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
-            <QrCode className="h-8 w-8" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">QRコード作成ツール</h1>
-          <p className="mt-3 text-stone-600">URLや文字列から、テキスト付きのQRコード画像を作成できます。</p>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[1fr_460px]">
-          <Card className="rounded-3xl border-0 shadow-sm">
-            <CardContent className="space-y-6 p-6 md:p-8">
-              <section>
-                <label className="mb-2 flex items-center gap-2 font-bold">
-                  <QrCode className="h-5 w-5" />
-                  QRコードにしたい文字列
-                </label>
-                <textarea
-                  value={qrText}
-                  onChange={(event) => setQrText(event.target.value)}
-                  className="min-h-28 w-full rounded-2xl border border-stone-200 bg-white p-4 outline-none transition focus:border-stone-400"
-                  placeholder="https://example.com または 表示したい文字列"
-                />
-              </section>
-
-              <section>
-                <label className="mb-2 flex items-center gap-2 font-bold">
-                  <Type className="h-5 w-5" />
-                  表示テキスト
-                </label>
-                <input
-                  value={displayText}
-                  onChange={(event) => setDisplayText(event.target.value)}
-                  className="w-full rounded-2xl border border-stone-200 bg-white p-4 outline-none transition focus:border-stone-400"
-                  placeholder="QRコードの上または下に表示するテキスト"
-                />
-              </section>
-
-              <section className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block font-bold">表示テキストの文字色</label>
-                  <select
-                    value={textColor}
-                    onChange={(event) => setTextColor(event.target.value)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white p-4 outline-none transition focus:border-stone-400"
-                  >
-                    {textColors.map((color) => (
-                      <option key={color.value} value={color.value}>{color.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-bold">表示テキストの位置</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setTextPosition("top")}
-                      className={`rounded-2xl border p-4 font-bold transition ${textPosition === "top" ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white"}`}
-                    >
-                      上
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTextPosition("bottom")}
-                      className={`rounded-2xl border p-4 font-bold transition ${textPosition === "bottom" ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white"}`}
-                    >
-                      下
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              <section>
-                <label className="mb-3 flex items-center gap-2 font-bold">
-                  <Palette className="h-5 w-5" />
-                  QRコード画像の色
-                </label>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  {colorPresets.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setQrColor(preset.id)}
-                      className={`rounded-2xl border p-3 text-left transition ${qrColor === preset.id ? "border-stone-900 ring-2 ring-stone-900" : "border-stone-200"}`}
-                    >
-                      <div
-                        className="mb-2 h-10 rounded-xl border border-stone-100"
-                        style={{
-                          background: preset.type === "gradient"
-                            ? "linear-gradient(135deg, #feda75, #fa7e1e, #d62976, #962fbf)"
-                            : preset.dark,
-                        }}
-                      />
-                      <div className="text-sm font-bold">{preset.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl border-0 shadow-sm">
-            <CardContent className="flex h-full flex-col items-center justify-center gap-5 p-6 md:p-8">
-              <div className="w-full rounded-3xl bg-white p-4 shadow-inner">
-                {qrText.trim() ? (
-                  <canvas ref={canvasRef} className="mx-auto block max-w-full" />
-                ) : (
-                  <div className="flex h-96 items-center justify-center rounded-2xl bg-stone-100 text-stone-500">
-                    文字列を入力してください
-                  </div>
-                )}
-              </div>
-              <Button
-                onClick={handleDownload}
-                disabled={!qrText.trim()}
-                className="w-full rounded-2xl py-6 text-base font-bold"
-              >
-                <Download className="mr-2 h-5 w-5" />
-                PNGでダウンロード
-              </Button>
-              <p className="text-center text-sm text-stone-500">
-                印刷やSNS投稿に使う前に、スマホで読み取り確認してください。
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
 }
+
+function downloadQR(){
+
+    const canvas = document.getElementById("finalCanvas");
+
+    const link = document.createElement("a");
+
+    link.download = "qr-code.png";
+
+    link.href = canvas.toDataURL();
+
+    link.click();
+
+}
+
+</script>
+
+</body>
+</html>
