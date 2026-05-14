@@ -106,20 +106,34 @@
       color: var(--muted);
     }
 
-    .mini-points {
-      display: grid;
-      gap: 10px;
-    }
+.mini-points {
+  display: grid;
+  gap: 14px;
+}
 
-    .point {
-      padding: 12px 14px;
-      border-radius: 18px;
-      background: #fff7fb;
-      border: 1px solid var(--line);
-      font-weight: 700;
-      color: #6d5558;
-    }
+.point {
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 6px;
+  font-weight: 700;
+  color: #6d5558;
+  line-height: 1.8;
+  z-index: 1;
+}
 
+.point::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: 4px;
+  height: 0.7em;
+  background: rgba(255, 182, 210, 0.55);
+  z-index: -1;
+  border-radius: 6px;
+  transform: rotate(-1deg);
+}
     .section-title {
       text-align: center;
       margin: 38px 0 18px;
@@ -271,7 +285,7 @@
 <body>
   <main class="page">
     <header>
-      <div class="owner">🌿 忙しいママの時短を叶える</div>
+      <div class="owner">🌿 忙しいママ広報の時短を叶える</div>
       <h1><span class="highlight">ひとり広報</span>のための<br />ミニ便利ツール集</h1>
       <p class="lead">
         個人事業主さん、小さなお店、地域活動をしている人のための、
@@ -281,7 +295,7 @@
 
     <section class="intro-card">
       <div>
-        <h2>むずかしいことは、少しだけラクに。</h2>
+        <h2>面倒な作業を、一発で。</h2>
         <p>
           SNS投稿、チラシづくり、動画の切り出し、ちょっとした画像づくり。
           「誰かに頼むほどではないけど、自分でやるには少し面倒」な作業を、
