@@ -281,6 +281,25 @@
         grid-template-columns: 1fr;
       }
     }
+    .about-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.about-profile img {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #fff;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+
+.about-text {
+  flex: 1;
+}
   </style>
 </head>
 <body>
@@ -409,19 +428,25 @@
 
 
 </section>
+<section class="message-box">
+  <div class="about-profile">
 
-    <section class="message-box">
+    <img src="./profile.jpg" alt="プロフィール画像" />
+
+    <div class="about-text">
       <strong>このサイトについて</strong><br />
-      このサイトは、ひとり広報TOOLSが運営しています。
+      このサイトは、ひとり広報TOOLSが運営しています。自身もカフェやNPO、自治会など複数の広報担当を兼務する生活のなか、少し手間を減らすツールを開発。
+      <br/><br/>
+      ・いくら時間があっても足りない…
       <br/>
-      いくら時間があっても足りない…
-      <br/>
-      タスクが無限に増え続ける…
-      <br/>
-      そんな仲間を救うため、小さくて使いやすい便利ツールを少しずつ追加していきます。
-    </section>
+      ・タスクが無限に増え続ける…
+      <br/><br/>
+      そんな仲間を救うため、
+      小さくて使いやすい便利ツールを少しずつ追加しています。
+    </div>
 
-    <footer>
+  </div>
+</section>    <footer>
       © ひとり広報のためのミニ便利ツール集｜運営：ひとり広報TOOLS<br/>
       <a href="https://forms.gle/1MwgXnGe4k8U44nf7"><div class="open-button">お問い合わせ</div></a>
     </footer>
