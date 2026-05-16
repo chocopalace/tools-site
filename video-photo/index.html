@@ -377,6 +377,7 @@
 
       const imageUrl = canvas.toDataURL('image/png');
       downloadLink.href = imageUrl;
+      downloadLink.download = createFileName();
       photoBox.style.display = 'block';
       message.textContent = '写真ができました！下のボタンから保存できます。';
       photoBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -404,6 +405,18 @@
         currentVideoUrl = null;
       }
     });
+    function createFileName() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hour = String(now.getHours()).padStart(2, '0');
+  const minute = String(now.getMinutes()).padStart(2, '0');
+  const second = String(now.getSeconds()).padStart(2, '0');
+
+  return `video-photo-${year}${month}${day}-${hour}${minute}${second}.png`;
+}
   </script>
 </body>
 </html>
