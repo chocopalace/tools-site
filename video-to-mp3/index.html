@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>動画から音だけ取り出し隊</title>
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+  <style>
+    :root {
+      --main: #ff7aa8;
+      --sub: #fff1f6;
+      --text: #4a3a3f;
+      --line: #f4c8d8;
+      --white: #fff;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: linear-gradient(180deg, #fff7fb, #ffffff);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 32px 16px 60px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      margin: 0 0 10px;
+      color: #e94f8a;
+    }
+
+    .hero p {
+      margin: 0;
+      font-weight: 700;
+      color: #7a5b65;
+    }
+
+    .card {
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(255, 122, 168, 0.16);
+    }
+
+    .drop {
+      border: 3px dashed var(--line);
+      background: var(--sub);
+      border-radius: 24px;
+      padding: 34px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .drop:hover,
+    .drop.dragover {
+      background: #ffe3ef;
+      transform: translateY(-2px);
+    }
+
+    .drop strong {
+      display: block;
+      font-size: 20px;
+      color: #e94f8a;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-name {
+      margin-top: 16px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .settings {
+      display: grid;
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    label {
+      font-weight: 800;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    select {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 2px solid var(--line);
+      background: #fff;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #ff7aa8, #ff9fbd);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(255, 122, 168, 0.3);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .progress-box {
+      margin-top: 22px;
+      display: none;
+    }
+
+    .progress-bg {
+      height: 14px;
+      background: #ffe3ef;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #ff7aa8;
+      transition: width 0.2s;
+    }
+
+    .status {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: 700;
+      color: #7a5b65;
+    }
+
+    .result {
+      display: none;
+      margin-top: 24px;
+      padding: 18px;
+      border-radius: 22px;
+      background: #fff7fb;
+      border: 1px solid var(--line);
+      text-align: center;
+    }
+
+    audio {
+      width: 100%;
+      margin: 12px 0;
+    }
+
+    .download {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 14px 24px;
+      border-radius: 999px;
+      background: #e94f8a;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 900;
+    }
+
+    .note {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #7a5b65;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>動画から音だけ取り出し隊</h1>
+      <p>動画ファイルから音声だけを取り出して、MP3で保存できます。</p>
+    </section>
+
+    <section class="card">
+      <div class="drop" id="dropArea">
+        <strong>動画ファイルを選択</strong>
+        <span>またはここにドラッグ＆ドロップ</span>
+        <input type="file" id="fileInput" accept="video/*" />
+      </div>
+
+      <div class="file-name" id="fileName">まだファイルが選択されていません</div>
+
+      <div class="settings">
+        <div>
+          <label for="bitrate">音質を選ぶ</label>
+          <select id="bitrate">
+            <option value="128">標準 128kbps</option>
+            <option value="192">きれい 192kbps</option>
+            <option value="320">高音質 320kbps</option>
+            <option value="64">軽量 64kbps</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="convertBtn" disabled>音だけ取り出す</button>
+
+      <div class="progress-box" id="progressBox">
+        <div class="progress-bg">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="status" id="status">準備中...</div>
+      </div>
+
+      <div class="result" id="result">
+        <strong>MP3ができました！</strong>
+        <audio id="audioPreview" controls></audio>
+        <a id="downloadLink" class="download" download>MP3をダウンロード</a>
+      </div>
+
+      <p class="note">
+        ※ 変換はブラウザ内で行われます。動画はサーバーに送信されません。<br>
+        ※ 大きすぎる動画は処理に時間がかかる場合があります。
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const dropArea = document.getElementById("dropArea");
+    const fileName = document.getElementById("fileName");
+    const convertBtn = document.getElementById("convertBtn");
+    const bitrateSelect = document.getElementById("bitrate");
+    const progressBox = document.getElementById("progressBox");
+    const progressBar = document.getElementById("progressBar");
+    const statusText = document.getElementById("status");
+    const result = document.getElementById("result");
+    const audioPreview = document.getElementById("audioPreview");
+    const downloadLink = document.getElementById("downloadLink");
+
+    let selectedFile = null;
+
+    dropArea.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) {
+        setFile(fileInput.files[0]);
+      }
+    });
+
+    dropArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropArea.classList.add("dragover");
+    });
+
+    dropArea.addEventListener("dragleave", () => {
+      dropArea.classList.remove("dragover");
+    });
+
+    dropArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropArea.classList.remove("dragover");
+
+      if (e.dataTransfer.files.length > 0) {
+        setFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    function setFile(file) {
+      if (!file.type.startsWith("video/")) {
+        alert("動画ファイルを選んでください。");
+        return;
+      }
+
+      selectedFile = file;
+      fileName.textContent = file.name;
+      convertBtn.disabled = false;
+      result.style.display = "none";
+    }
+
+    convertBtn.addEventListener("click", async () => {
+      if (!selectedFile) return;
+
+      try {
+        convertBtn.disabled = true;
+        progressBox.style.display = "block";
+        result.style.display = "none";
+        setProgress(5, "動画を読み込んでいます...");
+
+        const arrayBuffer = await selectedFile.arrayBuffer();
+
+        setProgress(20, "音声データを解析しています...");
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        setProgress(45, "MP3に変換しています...");
+
+        const mp3Blob = encodeMp3(audioBuffer, Number(bitrateSelect.value));
+
+        setProgress(90, "ダウンロード準備中...");
+
+        const url = URL.createObjectURL(mp3Blob);
+        const mp3Name = makeMp3FileName(selectedFile.name);
+
+        audioPreview.src = url;
+        downloadLink.href = url;
+        downloadLink.download = mp3Name;
+
+        setProgress(100, "完成しました！");
+        result.style.display = "block";
+      } catch (error) {
+        console.error(error);
+        alert("変換できませんでした。別の動画形式で試してください。");
+        statusText.textContent = "エラーが発生しました";
+      } finally {
+        convertBtn.disabled = false;
+      }
+    });
+
+    function encodeMp3(audioBuffer, bitrate) {
+      const channels = audioBuffer.numberOfChannels;
+      const sampleRate = audioBuffer.sampleRate;
+
+      const left = audioBuffer.getChannelData(0);
+      const right = channels > 1 ? audioBuffer.getChannelData(1) : left;
+
+      const mp3Encoder = new lamejs.Mp3Encoder(2, sampleRate, bitrate);
+      const blockSize = 1152;
+      const mp3Data = [];
+
+      for (let i = 0; i < left.length; i += blockSize) {
+        const leftChunk = floatTo16BitPCM(left.subarray(i, i + blockSize));
+        const rightChunk = floatTo16BitPCM(right.subarray(i, i + blockSize));
+
+        const mp3buf = mp3Encoder.encodeBuffer(leftChunk, rightChunk);
+        if (mp3buf.length > 0) {
+          mp3Data.push(mp3buf);
+        }
+
+        const percent = 45 + Math.round((i / left.length) * 45);
+        setProgress(percent, "MP3に変換しています...");
+      }
+
+      const end = mp3Encoder.flush();
+      if (end.length > 0) {
+        mp3Data.push(end);
+      }
+
+      return new Blob(mp3Data, { type: "audio/mp3" });
+    }
+
+    function floatTo16BitPCM(float32Array) {
+      const int16Array = new Int16Array(float32Array.length);
+
+      for (let i = 0; i < float32Array.length; i++) {
+        let s = Math.max(-1, Math.min(1, float32Array[i]));
+        int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+
+      return int16Array;
+    }
+
+    function makeMp3FileName(originalName) {
+      const baseName = originalName.replace(/\.[^/.]+$/, "");
+      const now = new Date();
+      const stamp =
+        now.getFullYear().toString() +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        String(now.getDate()).padStart(2, "0") +
+        "_" +
+        String(now.getHours()).padStart(2, "0") +
+        String(now.getMinutes()).padStart(2, "0") +
+        String(now.getSeconds()).padStart(2, "0");
+
+      return `${baseName}_audio_${stamp}.mp3`;
+    }
+
+    function setProgress(percent, text) {
+      progressBar.style.width = percent + "%";
+      statusText.textContent = text;
+    }
+  </script>
+</body>
+</html>
