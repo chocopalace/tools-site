@@ -107,34 +107,35 @@
       color: var(--muted);
     }
 
-.mini-points {
-  display: grid;
-  gap: 14px;
-}
+    .mini-points {
+      display: grid;
+      gap: 14px;
+    }
 
-.point {
-  position: relative;
-  display: inline-block;
-  width: fit-content;
-  padding: 2px 6px;
-  font-weight: 700;
-  color: #6d5558;
-  line-height: 1.8;
-  z-index: 1;
-}
+    .point {
+      position: relative;
+      display: inline-block;
+      width: fit-content;
+      padding: 2px 6px;
+      font-weight: 700;
+      color: #6d5558;
+      line-height: 1.8;
+      z-index: 1;
+    }
 
-.point::before {
-  content: "";
-  position: absolute;
-  left: -2px;
-  right: -2px;
-  bottom: 4px;
-  height: 0.7em;
-  background: rgba(255, 182, 210, 0.55);
-  z-index: -1;
-  border-radius: 6px;
-  transform: rotate(-1deg);
-}
+    .point::before {
+      content: "";
+      position: absolute;
+      left: -2px;
+      right: -2px;
+      bottom: 4px;
+      height: 0.7em;
+      background: rgba(255, 182, 210, 0.55);
+      z-index: -1;
+      border-radius: 6px;
+      transform: rotate(-1deg);
+    }
+
     .section-title {
       text-align: center;
       margin: 38px 0 18px;
@@ -241,16 +242,6 @@
       box-shadow: 0 10px 20px rgba(217, 111, 141, 0.22);
     }
 
-    .coming-soon {
-      opacity: 0.72;
-      cursor: default;
-    }
-
-    .coming-soon .open-button {
-      background: #d9c8cd;
-      box-shadow: none;
-    }
-
     .message-box {
       margin: 32px auto 0;
       max-width: 850px;
@@ -265,11 +256,35 @@
       color: var(--text);
     }
 
+    .about-profile {
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+    }
+
+    .about-profile img {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #fff;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      flex-shrink: 0;
+    }
+
+    .about-text {
+      flex: 1;
+    }
+
     footer {
       text-align: center;
       padding: 34px 0 0;
       color: var(--muted);
       font-size: 13px;
+    }
+
+    footer a {
+      text-decoration: none;
     }
 
     @media (max-width: 860px) {
@@ -280,28 +295,16 @@
       .tools-grid {
         grid-template-columns: 1fr;
       }
+
+      .about-profile {
+        flex-direction: column;
+        align-items: center;
+        text-align: left;
+      }
     }
-    .about-profile {
-  display: flex;
-  align-items: flex-start;
-  gap: 18px;
-}
-
-.about-profile img {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid #fff;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  flex-shrink: 0;
-}
-
-.about-text {
-  flex: 1;
-}
   </style>
 </head>
+
 <body>
   <main class="page">
     <header>
@@ -334,121 +337,123 @@
       <p>地味に時間のかかる作業を一発で。</p>
     </section>
 
-<section class="tools-grid" aria-label="ミニ便利ツール一覧">
+    <section class="tools-grid" aria-label="ミニ便利ツール一覧">
 
-  <a class="tool-card" href="./video-photo/">
-    <div class="icon">📸</div>
-    <h3>動画から写真メーカー</h3>
-    <p>
-      動画の好きな場面を止めて、そのまま写真として保存できます。
-      演奏会、イベント、商品紹介、子どもの記録などのSNS素材づくりに便利です。
-    </p>
+      <a class="tool-card" href="./video-photo/">
+        <div class="icon">📸</div>
+        <h3>動画から写真メーカー</h3>
+        <p>
+          動画の好きな場面を止めて、そのまま写真として保存できます。
+          演奏会、イベント、商品紹介、子どもの記録などのSNS素材づくりに便利です。
+        </p>
+        <div class="tags">
+          <span class="tag">動画</span>
+          <span class="tag">写真切り出し</span>
+          <span class="tag">SNS素材</span>
+        </div>
+        <div class="open-button">使ってみる →</div>
+      </a>
 
-    <div class="tags">
-      <span class="tag">動画</span>
-      <span class="tag">写真切り出し</span>
-      <span class="tag">SNS素材</span>
-    </div>
+      <a class="tool-card" href="./video-to-mp3/">
+        <div class="icon">🎧</div>
+        <h3>動画から音だけ取り出し隊</h3>
+        <p>
+          動画ファイルから音声だけを取り出して、MP3として保存できます。
+          インタビュー、演奏、講座動画、文字起こし前の音声づくりに便利です。
+        </p>
+        <div class="tags">
+          <span class="tag">動画</span>
+          <span class="tag">MP3変換</span>
+          <span class="tag">音声抽出</span>
+        </div>
+        <div class="open-button">使ってみる →</div>
+      </a>
 
-    <div class="open-button">使ってみる →</div>
-  </a>
+      <a class="tool-card" href="./image-resize/">
+        <div class="icon">🖼️</div>
+        <h3>画像サイズそろえるくん</h3>
+        <p>
+          複数画像のサイズや縦横比を、まとめて一発変換。
+          Instagram投稿、ストーリー、チラシ、YouTubeサムネ用サイズにすぐ合わせられます。
+        </p>
+        <div class="tags">
+          <span class="tag">画像変換</span>
+          <span class="tag">Instagram</span>
+          <span class="tag">時短</span>
+        </div>
+        <div class="open-button">使ってみる →</div>
+      </a>
 
+      <a class="tool-card" href="./photo-sns-check/">
+        <div class="icon">🔍</div>
+        <h3>SNS写真チェックさん</h3>
+        <p>
+          SNS投稿前に、顔・名札・車のナンバー・背景などの写り込みを確認。
+          地域イベントや子ども写真の「うっかり投稿防止」に役立ちます。
+        </p>
+        <div class="tags">
+          <span class="tag">安全確認</span>
+          <span class="tag">イベント運営</span>
+          <span class="tag">SNS投稿前</span>
+        </div>
+        <div class="open-button">使ってみる →</div>
+      </a>
 
-  <a class="tool-card" href="./image-resize/">
-    <div class="icon">🖼️</div>
-    <h3>画像サイズそろえるくん</h3>
+      <a class="tool-card" href="./pdf-to-jpg/">
+        <div class="icon">📄</div>
+        <h3>PDFをJPGに変換</h3>
+        <p>
+          PDFファイルをJPG画像に変換できます。
+          チラシや資料をSNS投稿用の画像にしたい時に便利です。
+        </p>
+        <div class="tags">
+          <span class="tag">PDF</span>
+          <span class="tag">JPG変換</span>
+          <span class="tag">SNS素材</span>
+        </div>
+        <div class="open-button">使ってみる →</div>
+      </a>
 
-    <p>
-      複数画像のサイズや縦横比を、まとめて一発変換。
-      Instagram投稿、ストーリー、チラシ、YouTubeサムネ用サイズにすぐ合わせられます。
-    </p>
+      <a class="tool-card" href="./qr-code-generator/">
+        <div class="icon">🔳</div>
+        <h3>QRコード作成ツール</h3>
+        <p>
+          URLやメールアドレスなどを、かんたんにQRコードにできます。
+          チラシやショップカード、SNS案内に使いやすいツールです。
+        </p>
+        <div class="tags">
+          <span class="tag">QRコード</span>
+          <span class="tag">URL案内</span>
+          <span class="tag">チラシ作り</span>
+        </div>
+        <div class="open-button">使ってみる →</div>
+      </a>
 
-    <div class="tags">
-      <span class="tag">画像変換</span>
-      <span class="tag">Instagram</span>
-      <span class="tag">時短</span>
-    </div>
+    </section>
 
-    <div class="open-button">使ってみる →</div>
-  </a>
+    <section class="message-box">
+      <div class="about-profile">
+        <img src="./profile.png" alt="ひとり広報TOOLS" />
 
+        <div class="about-text">
+          <strong>このサイトについて</strong><br />
+          このサイトは、ひとり広報TOOLSが運営しています。自身もカフェやNPO、自治会など複数の広報担当を兼務する生活のなか、少し手間を減らすツールを開発。
+          <br/><br/>
+          ・いくら時間があっても足りない…
+          <br/>
+          ・タスクが無限に増え続ける…
+          <br/><br/>
+          そんな仲間を救うため、
+          小さくて使いやすい便利ツールを少しずつ追加しています。
+        </div>
+      </div>
+    </section>
 
-  <a class="tool-card" href="./photo-sns-check/">
-    <div class="icon">🔍</div>
-    <h3>SNS写真チェックさん</h3>
-
-    <p>
-      SNS投稿前に、顔・名札・車のナンバー・背景などの写り込みを確認。
-      地域イベントや子ども写真の「うっかり投稿防止」に役立ちます。
-    </p>
-
-    <div class="tags">
-      <span class="tag">安全確認</span>
-      <span class="tag">イベント運営</span>
-      <span class="tag">SNS投稿前</span>
-    </div>
-
-    <div class="open-button">使ってみる →</div>
-  </a>
-
-<a class="tool-card" href="./pdf-to-jpg/">
-  <div class="icon">📄</div>
-  <h3>PDFをJPGに変換</h3>
-  <p>
-    PDFファイルをJPG画像に変換できます。
-    チラシや資料をSNS投稿用の画像にしたい時に便利です。
-  </p>
-
-  <div class="tags">
-    <span class="tag">PDF</span>
-    <span class="tag">JPG変換</span>
-    <span class="tag">SNS素材</span>
-  </div>
-
-  <div class="open-button">使ってみる →</div>
-</a>
-
-<a class="tool-card" href="./qr-code-generator/">
-  <div class="icon">🔳</div>
-  <h3>QRコード作成ツール</h3>
-  <p>
-    URLやメールアドレスなどを、かんたんにQRコードにできます。
-    チラシやショップカード、SNS案内に使いやすいツールです。
-  </p>
-
-  <div class="tags">
-    <span class="tag">QRコード</span>
-    <span class="tag">URL案内</span>
-    <span class="tag">チラシ作り</span>
-  </div>
-
-  <div class="open-button">使ってみる →</div>
-</a>
-
-
-
-</section>
-<section class="message-box">
-  <div class="about-profile">
-
-    <img src="./profile.png" alt="ひとり広報TOOLS" />
-
-    <div class="about-text">
-      <strong>このサイトについて</strong><br />
-      このサイトは、ひとり広報TOOLSが運営しています。自身もカフェやNPO、自治会など複数の広報担当を兼務する生活のなか、少し手間を減らすツールを開発。
-      <br/><br/>
-      ・いくら時間があっても足りない…
-      <br/>
-      ・タスクが無限に増え続ける…
-      <br/><br/>
-      そんな仲間を救うため、
-      小さくて使いやすい便利ツールを少しずつ追加しています。
-    </div>
-
-  </div>
-</section>    <footer>
+    <footer>
       © ひとり広報のためのミニ便利ツール集｜運営：ひとり広報TOOLS<br/>
-      <a href="https://forms.gle/1MwgXnGe4k8U44nf7"><div class="open-button">お問い合わせ</div></a>
+      <a href="https://forms.gle/1MwgXnGe4k8U44nf7">
+        <div class="open-button">お問い合わせ</div>
+      </a>
     </footer>
   </main>
 </body>
