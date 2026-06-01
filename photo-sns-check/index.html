@@ -50,17 +50,11 @@
           写真を選ぶ
         </button>
 
-        <button id="checkBtn" class="rounded-xl bg-black px-5 py-3 font-bold text-white disabled:opacity-40" disabled>
-          AIチェック
-        </button>
 
         <button id="resetBtn" class="rounded-xl bg-slate-200 px-5 py-3 font-bold text-slate-700">
           リセット
         </button>
 
-        <button id="saveBlurBtn" class="rounded-xl bg-green-600 px-5 py-3 font-bold text-white disabled:opacity-40" disabled>
-          ぼかし画像を保存
-        </button>
       </div>
 
       <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
@@ -84,6 +78,16 @@
             <img id="previewImage" class="w-full rounded-2xl" alt="選択した写真" />
             <div id="overlay" class="absolute inset-0 pointer-events-none"></div>
           </div>
+        </div>
+
+        <div id="photoActionArea" class="mt-4 hidden flex-wrap justify-center gap-3">
+          <button id="previewBlurBtn" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-40" disabled>
+            ぼかし画像をプレビュー
+          </button>
+
+          <button id="saveBlurBtn" class="rounded-xl bg-green-600 px-5 py-3 font-bold text-white disabled:opacity-40" disabled>
+            ぼかし画像を保存
+          </button>
         </div>
       </div>
 
@@ -133,8 +137,9 @@
 
     const fileInput = document.getElementById("fileInput");
     const selectBtn = document.getElementById("selectBtn");
-    const checkBtn = document.getElementById("checkBtn");
     const resetBtn = document.getElementById("resetBtn");
+    const photoActionArea = document.getElementById("photoActionArea");
+    const previewBlurBtn = document.getElementById("previewBlurBtn");
     const saveBlurBtn = document.getElementById("saveBlurBtn");
     const allBlurBtn = document.getElementById("allBlurBtn");
     const allClearBtn = document.getElementById("allClearBtn");
@@ -152,8 +157,10 @@
     const ocrText = document.getElementById("ocrText");
 
     let selectedFile = null;
+    let originalFileName = "sns-photo";
     let imageBase64 = "";
     let risks = [];
+    let isBlurPreview = false;
 
     selectBtn.addEventListener("click", () => fileInput.click());
 
@@ -162,6 +169,7 @@
       if (!file) return;
 
       selectedFile = file;
+      originalFileName = file.name || "sns-photo";
 
       const normalized = await normalizeImage(file);
       imageBase64 = normalized.base64;
@@ -170,14 +178,17 @@
       previewWrap.classList.remove("hidden");
       emptyState.classList.add("hidden");
 
-      previewImage.onload = () => {
-        checkBtn.disabled = false;
+      previewImage.onload = async () => {
+        previewImage.onload = null;
         resetAll();
-        setStatus("写真を読み込みました。AIチェックを押してください。");
+        photoActionArea.classList.remove("hidden");
+        photoActionArea.classList.add("flex");
+        setStatus("写真を読み込みました。AIで自動チェック中です...");
+        await runVisionCheck();
       };
     });
 
-    checkBtn.addEventListener("click", runVisionCheck);
+    previewBlurBtn.addEventListener("click", previewBlurredImage);
     resetBtn.addEventListener("click", fullReset);
     saveBlurBtn.addEventListener("click", saveBlurredImage);
 
@@ -442,6 +453,7 @@ const response = await fetch(
 
       if (risks.length === 0) {
         riskList.textContent = "まだ検出結果はありません。";
+        previewBlurBtn.disabled = true;
         saveBlurBtn.disabled = true;
         allBlurBtn.disabled = true;
         allClearBtn.disabled = true;
@@ -491,6 +503,7 @@ const response = await fetch(
         });
       });
 
+      previewBlurBtn.disabled = false;
       saveBlurBtn.disabled = false;
       allBlurBtn.disabled = false;
       allClearBtn.disabled = false;
@@ -544,9 +557,7 @@ const response = await fetch(
       }
     }
 
-    function saveBlurredImage() {
-      if (!previewImage.src || risks.length === 0) return;
-
+    function createBlurredCanvas() {
       const canvas = document.createElement("canvas");
       canvas.width = previewImage.naturalWidth;
       canvas.height = previewImage.naturalHeight;
@@ -565,12 +576,70 @@ const response = await fetch(
         );
       });
 
+      return canvas;
+    }
+
+    function previewBlurredImage() {
+      if (!previewImage.src || risks.length === 0) return;
+
+      if (!isBlurPreview) {
+        const canvas = createBlurredCanvas();
+        previewImage.dataset.originalSrc = previewImage.src;
+        previewImage.src = canvas.toDataURL("image/png");
+        overlay.classList.add("hidden");
+        previewBlurBtn.textContent = "元の写真に戻す";
+        isBlurPreview = true;
+        setStatus("ぼかし後の画像をプレビュー中です。保存すると、この状態の画像を保存します。");
+      } else {
+        previewImage.src = previewImage.dataset.originalSrc || previewImage.src;
+        overlay.classList.remove("hidden");
+        previewBlurBtn.textContent = "ぼかし画像をプレビュー";
+        isBlurPreview = false;
+        setStatus("元の写真表示に戻しました。検出箇所を確認できます。きいろいボタンでぼかす/ぼかさないを選べます。");
+      }
+    }
+
+    function saveBlurredImage() {
+      if (!previewImage.src || risks.length === 0) return;
+
+      const currentPreview = isBlurPreview;
+      if (currentPreview) {
+        previewImage.src = previewImage.dataset.originalSrc || previewImage.src;
+      }
+
+      const canvas = createBlurredCanvas();
+
+      if (currentPreview) {
+        previewImage.src = canvas.toDataURL("image/png");
+      }
+
       const link = document.createElement("a");
-      link.download = "sns-photo-blurred.png";
+      link.download = createUniqueDownloadName(originalFileName);
       link.href = canvas.toDataURL("image/png");
       link.click();
 
-      setStatus("ぼかし画像を保存しました。");
+      setStatus("ぼかし画像を保存しました。ファイル名は毎回変わるので、前の保存画像に上書きされにくくなっています。");
+    }
+
+    function createUniqueDownloadName(fileName) {
+      const base = String(fileName || "sns-photo")
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[\\/:*?"<>|]/g, "-")
+        .trim() || "sns-photo";
+
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const stamp = [
+        now.getFullYear(),
+        pad(now.getMonth() + 1),
+        pad(now.getDate())
+      ].join("") + "_" + [
+        pad(now.getHours()),
+        pad(now.getMinutes()),
+        pad(now.getSeconds())
+      ].join("");
+
+      return `${base}_blurred_${stamp}.png`;
     }
 
     function applyMosaicBlur(ctx, x, y, w, h) {
@@ -614,6 +683,10 @@ const response = await fetch(
       riskBadge.textContent = "未チェック";
       riskBadge.className = "rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-700";
       ocrText.textContent = "まだOCR結果はありません。";
+      isBlurPreview = false;
+      overlay.classList.remove("hidden");
+      previewBlurBtn.textContent = "ぼかし画像をプレビュー";
+      previewBlurBtn.disabled = true;
       saveBlurBtn.disabled = true;
       allBlurBtn.disabled = true;
       allClearBtn.disabled = true;
@@ -625,9 +698,11 @@ const response = await fetch(
       imageBase64 = "";
       fileInput.value = "";
       previewImage.removeAttribute("src");
+      previewImage.removeAttribute("data-original-src");
       previewWrap.classList.add("hidden");
       emptyState.classList.remove("hidden");
-      checkBtn.disabled = true;
+      photoActionArea.classList.add("hidden");
+      photoActionArea.classList.remove("flex");
       resetAll();
       setStatus("写真を選んでください。");
     }
