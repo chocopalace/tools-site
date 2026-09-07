@@ -263,14 +263,34 @@ const response = await fetch(
   }
 );        setProgress(60);
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+
+        try {
+          data = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          throw new Error(
+            `解析サーバーから正しいデータが返りませんでした（HTTP ${response.status}）。`
+          );
+        }
+
         console.log(data);
 
         if (!response.ok || data.error) {
-          throw new Error(data.error || "Google Vision APIでエラーが発生しました");
+          throw new Error(getApiErrorMessage(data, response.status));
+        }
+
+        if (!Array.isArray(data.responses)) {
+          throw new Error(
+            "解析結果が見つかりません。解析サーバーの設定を確認してください。"
+          );
         }
 
         const result = data.responses[0] || {};
+
+        if (result.error) {
+          throw new Error(getApiErrorMessage(result, response.status));
+        }
 
         if (result.fullTextAnnotation?.text) {
           ocrText.textContent = result.fullTextAnnotation.text;
@@ -356,8 +376,31 @@ const response = await fetch(
         }
       } catch (e) {
         console.error(e);
-        setStatus("エラー：" + e.message);
+        const message =
+          e instanceof Error
+            ? e.message
+            : typeof e === "string"
+              ? e
+              : JSON.stringify(e);
+        setStatus("エラー：" + message);
       }
+    }
+
+    function getApiErrorMessage(data, httpStatus) {
+      const error = data?.error ?? data?.responses?.[0]?.error ?? data;
+
+      if (typeof error === "string") return error;
+      if (error?.message) return error.message;
+      if (error?.error?.message) return error.error.message;
+
+      if (Array.isArray(error?.details)) {
+        const messages = error.details
+          .map((item) => item?.message || item?.reason)
+          .filter(Boolean);
+        if (messages.length) return messages.join(" / ");
+      }
+
+      return `Google Vision APIでエラーが発生しました（HTTP ${httpStatus}）。`;
     }
 
     function judgeDangerousText(text) {
