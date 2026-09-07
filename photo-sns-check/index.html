@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SNS写真 危険チェック</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 
   <style>
     body {
@@ -41,7 +39,7 @@
       <h1 class="text-3xl font-bold md:text-5xl">SNS写真 危険チェック</h1>
 
       <p class="mt-4 text-slate-600">
-        顔・電話番号・住所・学校名・看板などをAIで検出します。
+        写真に写っている顔をAIで検出し、ぼかし加工できます。
       </p>
       <a class="back-link" href="../">← ツール一覧にもどる</a>
 
@@ -126,10 +124,6 @@
           </div>
         </div>
 
-        <div class="rounded-3xl bg-slate-900 p-5 text-white shadow-sm">
-          <h2 class="mb-4 text-xl font-bold">OCR結果</h2>
-          <pre id="ocrText" class="max-h-64 overflow-auto whitespace-pre-wrap rounded-2xl bg-white/10 p-4 text-sm">まだOCR結果はありません。</pre>
-        </div>
       </aside>
     </section>
   </main>
@@ -156,7 +150,6 @@
     const riskBadge = document.getElementById("riskBadge");
     const riskCount = document.getElementById("riskCount");
     const riskList = document.getElementById("riskList");
-    const ocrText = document.getElementById("ocrText");
 
     let selectedFile = null;
     let originalFileName = "sns-photo";
@@ -186,7 +179,7 @@
         photoActionArea.classList.remove("hidden");
         photoActionArea.classList.add("flex");
         setStatus("写真を読み込みました。無料版AIで自動チェック中です...");
-        await runFreeCheck();
+        await runFaceOnlyCheck();
       };
     });
 
@@ -243,271 +236,140 @@
       });
     }
 
-async function runVisionCheck() {
-  if (!imageBase64) {
-    setStatus("エラー：画像データがまだ準備できていません。写真を選び直してください。");
-    return;
-  }
+    let mediaPipeDetectorPromise = null;
+
+    async function getMediaPipeDetector() {
+      if (!mediaPipeDetectorPromise) {
+        mediaPipeDetectorPromise = (async () => {
+          const visionModule = await import(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm"
+          );
+          const vision = await visionModule.FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+          );
+          return visionModule.FaceDetector.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath:
+                "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite"
+            },
+            runningMode: "IMAGE",
+            minDetectionConfidence: 0.25,
+            minSuppressionThreshold: 0.3
+          });
+        })();
+      }
+      return mediaPipeDetectorPromise;
+    }
+
+    function overlapRatio(a, b) {
+      const left = Math.max(a.x, b.x);
+      const top = Math.max(a.y, b.y);
+      const right = Math.min(a.x + a.width, b.x + b.width);
+      const bottom = Math.min(a.y + a.height, b.y + b.height);
+      const intersection = Math.max(0, right - left) * Math.max(0, bottom - top);
+      const smallest = Math.min(a.width * a.height, b.width * b.height);
+      return smallest > 0 ? intersection / smallest : 0;
+    }
+
+    async function runFaceOnlyCheck() {
       risks = [];
       renderAll();
-      setProgress(20);
-      setStatus("Google Vision APIで解析中...");
+      setProgress(8);
 
       try {
-const response = await fetch(
-  "https://vision-api.chocopalace-kyoto.workers.dev/vision-api",
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      imageBase64: imageBase64
-    })
-  }
-);        setProgress(60);
+        setStatus("高精度の顔検出モデルを準備しています...");
+        const detector = await getMediaPipeDetector();
+        setProgress(25);
 
-        const responseText = await response.text();
-        let data;
+        const sourceWidth = previewImage.naturalWidth;
+        const sourceHeight = previewImage.naturalHeight;
+        const candidates = [];
 
-        try {
-          data = responseText ? JSON.parse(responseText) : {};
-        } catch {
-          throw new Error(
-            `解析サーバーから正しいデータが返りませんでした（HTTP ${response.status}）。`
-          );
-        }
+        const addResults = (result, offsetX, offsetY, scaleX, scaleY) => {
+          (result?.detections || []).forEach((detection) => {
+            const box = detection.boundingBox;
+            if (!box) return;
 
-        console.log(data);
+            const face = {
+              x: offsetX + box.originX * scaleX,
+              y: offsetY + box.originY * scaleY,
+              width: box.width * scaleX,
+              height: box.height * scaleY
+            };
 
-        if (!response.ok || data.error) {
-          throw new Error(getApiErrorMessage(data, response.status));
-        }
+            const padding = Math.max(face.width, face.height) * 0.18;
+            face.x = Math.max(0, face.x - padding);
+            face.y = Math.max(0, face.y - padding);
+            face.width = Math.min(sourceWidth - face.x, face.width + padding * 2);
+            face.height = Math.min(sourceHeight - face.y, face.height + padding * 2);
 
-        if (!Array.isArray(data.responses)) {
-          throw new Error(
-            "解析結果が見つかりません。解析サーバーの設定を確認してください。"
-          );
-        }
-
-        const result = data.responses[0] || {};
-
-        if (result.error) {
-          throw new Error(getApiErrorMessage(result, response.status));
-        }
-
-        if (result.fullTextAnnotation?.text) {
-          ocrText.textContent = result.fullTextAnnotation.text;
-        } else {
-          ocrText.textContent = "文字は読み取れませんでした。";
-        }
-
-        if (result.faceAnnotations) {
-          result.faceAnnotations.forEach((face, index) => {
-            const box = verticesToBox(face.boundingPoly.vertices);
-            risks.push({
-              id: `face-${index}`,
-              label: "顔",
-              memo: "顔が認識できる可能性があります。",
-              color: "#ef4444",
-              blur: true,
-              ...box
-            });
-          });
-        }
-
-        if (result.textAnnotations) {
-          result.textAnnotations.slice(1).forEach((text, index) => {
-            const value = text.description || "";
-            const type = judgeDangerousText(value);
-
-            if (!type) return;
-
-            const box = verticesToBox(text.boundingPoly.vertices);
-
-            risks.push({
-              id: `text-${index}`,
-              label: type,
-              memo: `「${value}」が写り込んでいます。`,
-              color: getColorByLabel(type),
-              blur: true,
-              ...box
-            });
-          });
-        }
-
-        if (result.landmarkAnnotations) {
-          result.landmarkAnnotations.forEach((landmark, index) => {
-            if (!landmark.boundingPoly?.vertices) return;
-
-            const box = verticesToBox(landmark.boundingPoly.vertices);
-
-            risks.push({
-              id: `landmark-${index}`,
-              label: "ランドマーク",
-              memo: landmark.description || "場所特定につながる可能性があります。",
-              color: "#9333ea",
-              blur: false,
-              ...box
-            });
-          });
-        }
-
-        if (result.logoAnnotations) {
-          result.logoAnnotations.forEach((logo, index) => {
-            if (!logo.boundingPoly?.vertices) return;
-
-            const box = verticesToBox(logo.boundingPoly.vertices);
-
-            risks.push({
-              id: `logo-${index}`,
-              label: "ロゴ・店舗名",
-              memo: logo.description || "店舗や団体が特定される可能性があります。",
-              color: "#f97316",
-              blur: false,
-              ...box
-            });
-          });
-        }
-
-        setProgress(100);
-        renderAll();
-
-        if (risks.length === 0) {
-          setStatus("解析完了。危険候補は見つかりませんでした。最後に目視でも確認してください。");
-        } else {
-          setStatus(`解析完了。${risks.length}件の危険候補を検出しました。ぼかす/ぼかさないを選べます。`);
-        }
-      } catch (e) {
-        console.error(e);
-        const message =
-          e instanceof Error
-            ? e.message
-            : typeof e === "string"
-              ? e
-              : JSON.stringify(e);
-        setStatus("エラー：" + message);
-      }
-    }
-
-    function getApiErrorMessage(data, httpStatus) {
-      const error = data?.error ?? data?.responses?.[0]?.error ?? data;
-
-      if (typeof error === "string") return error;
-      if (error?.message) return error.message;
-      if (error?.error?.message) return error.error.message;
-
-      if (Array.isArray(error?.details)) {
-        const messages = error.details
-          .map((item) => item?.message || item?.reason)
-          .filter(Boolean);
-        if (messages.length) return messages.join(" / ");
-      }
-
-      return `Google Vision APIでエラーが発生しました（HTTP ${httpStatus}）。`;
-    }
-
-    let faceModelPromise = null;
-
-    async function loadFaceModel() {
-      if (!window.faceapi) {
-        throw new Error("顔検出ライブラリを読み込めませんでした。通信環境を確認してください。");
-      }
-
-      if (!faceModelPromise) {
-        faceModelPromise = faceapi.nets.tinyFaceDetector.loadFromUri(
-          "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model"
-        );
-      }
-
-      return faceModelPromise;
-    }
-
-    async function runFreeCheck() {
-      if (!previewImage.src) {
-        setStatus("エラー：画像データがまだ準備できていません。");
-        return;
-      }
-
-      risks = [];
-      renderAll();
-      setProgress(5);
-
-      try {
-        setStatus("顔検出モデルを準備しています...");
-        await loadFaceModel();
-        setProgress(15);
-
-        setStatus("写真の顔を確認しています...");
-        const detections = await faceapi.detectAllFaces(
-          previewImage,
-          new faceapi.TinyFaceDetectorOptions({
-            inputSize: 608,
-            scoreThreshold: 0.35
-          })
-        );
-
-        detections.forEach((item, index) => {
-          const box = item.box || item.detection?.box;
-          if (!box) return;
-
-          risks.push({
-            id: `face-${index}`,
-            label: "顔",
-            memo: "顔が認識できる可能性があります。",
-            color: "#ef4444",
-            blur: true,
-            x: box.x,
-            y: box.y,
-            width: box.width,
-            height: box.height
-          });
-        });
-
-        setProgress(35);
-        setStatus("写真内の文字を読み取っています...");
-
-        if (!window.Tesseract) {
-          throw new Error("文字認識ライブラリを読み込めませんでした。通信環境を確認してください。");
-        }
-
-        const ocr = await Tesseract.recognize(previewImage.src, "jpn+eng", {
-          logger: (message) => {
-            if (message.status === "recognizing text") {
-              setProgress(35 + Math.round((message.progress || 0) * 60));
+            if (!candidates.some((old) => overlapRatio(old, face) > 0.55)) {
+              candidates.push(face);
             }
-          }
-        });
-
-        const text = ocr?.data?.text?.trim() || "";
-        ocrText.textContent = text || "文字は読み取れませんでした。";
-
-        const words = Array.isArray(ocr?.data?.words) ? ocr.data.words : [];
-        words.forEach((word, index) => {
-          const value = String(word.text || "").trim();
-          const type = judgeDangerousText(value);
-          const box = word.bbox;
-          if (!type || !box) return;
-
-          risks.push({
-            id: `text-${index}`,
-            label: type,
-            memo: `「${value}」が写り込んでいます。`,
-            color: getColorByLabel(type),
-            blur: true,
-            x: box.x0,
-            y: box.y0,
-            width: box.x1 - box.x0,
-            height: box.y1 - box.y0
           });
-        });
+        };
+
+        setStatus("写真全体から顔を探しています...");
+        addResults(detector.detect(previewImage), 0, 0, 1, 1);
+        setProgress(45);
+
+        const tiles = 3;
+        const overlap = 0.12;
+        let completed = 0;
+
+        for (let row = 0; row < tiles; row++) {
+          for (let col = 0; col < tiles; col++) {
+            const baseW = sourceWidth / tiles;
+            const baseH = sourceHeight / tiles;
+            const sx = Math.max(0, col * baseW - baseW * overlap);
+            const sy = Math.max(0, row * baseH - baseH * overlap);
+            const sw = Math.min(sourceWidth - sx, baseW * (1 + overlap * 2));
+            const sh = Math.min(sourceHeight - sy, baseH * (1 + overlap * 2));
+
+            const canvas = document.createElement("canvas");
+            const maxSide = 900;
+            const resize = Math.min(1, maxSide / Math.max(sw, sh));
+            canvas.width = Math.max(1, Math.round(sw * resize));
+            canvas.height = Math.max(1, Math.round(sh * resize));
+            canvas.getContext("2d").drawImage(
+              previewImage,
+              sx, sy, sw, sh,
+              0, 0, canvas.width, canvas.height
+            );
+
+            addResults(
+              detector.detect(canvas),
+              sx,
+              sy,
+              sw / canvas.width,
+              sh / canvas.height
+            );
+
+            completed++;
+            setProgress(45 + Math.round((completed / (tiles * tiles)) * 50));
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          }
+        }
+
+        risks = candidates.map((box, index) => ({
+          id: `face-${index}`,
+          label: "顔",
+          memo: "顔が認識できる可能性があります。",
+          color: "#ef4444",
+          blur: true,
+          x: box.x,
+          y: box.y,
+          w: box.width,
+          h: box.height
+        }));
 
         setProgress(100);
         renderAll();
-
-        if (risks.length === 0) {
-          setStatus("無料版の解析が完了しました。候補は見つかりませんでした。最後に目視でも確認してください。");
-        } else {
-          setStatus(`無料版の解析が完了しました。${risks.length}件の候補を検出しました。`);
-        }
+        setStatus(
+          risks.length
+            ? `解析完了。${risks.length}人分の顔候補を検出しました。`
+            : "顔を検出できませんでした。人物が小さい場合は、目視で確認してください。"
+        );
       } catch (e) {
         console.error(e);
         const message = e instanceof Error ? e.message : String(e);
@@ -515,58 +377,6 @@ const response = await fetch(
       }
     }
 
-    function judgeDangerousText(text) {
-      const value = String(text || "").replace(/\s/g, "");
-
-      if (!value || value.length < 2) return null;
-
-      if (/0\d{1,4}[-ー−]?\d{1,4}[-ー−]?\d{3,4}/.test(value)) {
-        return "電話番号";
-      }
-
-      if (/\d{2,4}[-ー−]\d{1,4}/.test(value)) {
-        return "ナンバー・番号";
-      }
-
-      if (/\d{3}[-ー−]?\d{4}/.test(value)) {
-        return "郵便番号・住所";
-      }
-
-      if (/(都|道|府|県|市|区|町|村|丁目|番地|号)/.test(value) && value.length >= 3) {
-        return "住所・地名";
-      }
-
-      if (/(学校|小学校|中学校|高校|大学|幼稚園|保育園|駅|病院|医院|クリニック|公園|店|支店|営業所|株式会社|モール|センター|ホール|PLAZA|SHOP|CAFE|HAPPY|MENU)/i.test(value)) {
-        return "場所特定のヒント";
-      }
-
-      return null;
-    }
-
-    function getColorByLabel(label) {
-      if (label.includes("電話")) return "#eab308";
-      if (label.includes("ナンバー")) return "#22c55e";
-      if (label.includes("住所")) return "#ec4899";
-      if (label.includes("場所")) return "#2563eb";
-      return "#64748b";
-    }
-
-    function verticesToBox(vertices) {
-      const xs = vertices.map(v => Number(v.x || 0));
-      const ys = vertices.map(v => Number(v.y || 0));
-
-      const x = Math.min(...xs);
-      const y = Math.min(...ys);
-      const maxX = Math.max(...xs);
-      const maxY = Math.max(...ys);
-
-      return {
-        x,
-        y,
-        w: Math.max(maxX - x, 24),
-        h: Math.max(maxY - y, 24)
-      };
-    }
 
     function renderAll() {
       renderCircles();
@@ -837,7 +647,6 @@ const response = await fetch(
       riskCount.textContent = "0";
       riskBadge.textContent = "未チェック";
       riskBadge.className = "rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-700";
-      ocrText.textContent = "まだOCR結果はありません。";
       isBlurPreview = false;
       overlay.classList.remove("hidden");
       previewBlurBtn.textContent = "ぼかし画像をプレビュー";
