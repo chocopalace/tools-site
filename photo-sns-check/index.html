@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SNS写真 危険チェック</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 
   <style>
     body {
@@ -183,8 +185,8 @@
         resetAll();
         photoActionArea.classList.remove("hidden");
         photoActionArea.classList.add("flex");
-        setStatus("写真を読み込みました。AIで自動チェック中です...");
-        await runVisionCheck();
+        setStatus("写真を読み込みました。無料版AIで自動チェック中です...");
+        await runFreeCheck();
       };
     });
 
@@ -401,6 +403,116 @@ const response = await fetch(
       }
 
       return `Google Vision APIでエラーが発生しました（HTTP ${httpStatus}）。`;
+    }
+
+    let faceModelPromise = null;
+
+    async function loadFaceModel() {
+      if (!window.faceapi) {
+        throw new Error("顔検出ライブラリを読み込めませんでした。通信環境を確認してください。");
+      }
+
+      if (!faceModelPromise) {
+        faceModelPromise = faceapi.nets.tinyFaceDetector.loadFromUri(
+          "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model"
+        );
+      }
+
+      return faceModelPromise;
+    }
+
+    async function runFreeCheck() {
+      if (!previewImage.src) {
+        setStatus("エラー：画像データがまだ準備できていません。");
+        return;
+      }
+
+      risks = [];
+      renderAll();
+      setProgress(5);
+
+      try {
+        setStatus("顔検出モデルを準備しています...");
+        await loadFaceModel();
+        setProgress(15);
+
+        setStatus("写真の顔を確認しています...");
+        const detections = await faceapi.detectAllFaces(
+          previewImage,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 608,
+            scoreThreshold: 0.35
+          })
+        );
+
+        detections.forEach((item, index) => {
+          const box = item.box || item.detection?.box;
+          if (!box) return;
+
+          risks.push({
+            id: `face-${index}`,
+            label: "顔",
+            memo: "顔が認識できる可能性があります。",
+            color: "#ef4444",
+            blur: true,
+            x: box.x,
+            y: box.y,
+            width: box.width,
+            height: box.height
+          });
+        });
+
+        setProgress(35);
+        setStatus("写真内の文字を読み取っています...");
+
+        if (!window.Tesseract) {
+          throw new Error("文字認識ライブラリを読み込めませんでした。通信環境を確認してください。");
+        }
+
+        const ocr = await Tesseract.recognize(previewImage.src, "jpn+eng", {
+          logger: (message) => {
+            if (message.status === "recognizing text") {
+              setProgress(35 + Math.round((message.progress || 0) * 60));
+            }
+          }
+        });
+
+        const text = ocr?.data?.text?.trim() || "";
+        ocrText.textContent = text || "文字は読み取れませんでした。";
+
+        const words = Array.isArray(ocr?.data?.words) ? ocr.data.words : [];
+        words.forEach((word, index) => {
+          const value = String(word.text || "").trim();
+          const type = judgeDangerousText(value);
+          const box = word.bbox;
+          if (!type || !box) return;
+
+          risks.push({
+            id: `text-${index}`,
+            label: type,
+            memo: `「${value}」が写り込んでいます。`,
+            color: getColorByLabel(type),
+            blur: true,
+            x: box.x0,
+            y: box.y0,
+            width: box.x1 - box.x0,
+            height: box.y1 - box.y0
+          });
+        });
+
+        setProgress(100);
+        renderAll();
+
+        if (risks.length === 0) {
+          setStatus("無料版の解析が完了しました。候補は見つかりませんでした。最後に目視でも確認してください。");
+        } else {
+          setStatus(`無料版の解析が完了しました。${risks.length}件の候補を検出しました。`);
+        }
+      } catch (e) {
+        console.error(e);
+        const message = e instanceof Error ? e.message : String(e);
+        setStatus("エラー：" + message);
+      }
     }
 
     function judgeDangerousText(text) {
