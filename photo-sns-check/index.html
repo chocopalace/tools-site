@@ -81,6 +81,19 @@
         </div>
 
         <div id="photoActionArea" class="mt-4 hidden flex-wrap justify-center gap-3">
+          <div class="mb-2 w-full rounded-2xl bg-slate-50 p-4">
+            <div class="flex items-center justify-between gap-4">
+              <label for="blurStrength" class="font-bold text-slate-700">ぼかしの強さ</label>
+              <span id="blurStrengthValue" class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold text-blue-700">6</span>
+            </div>
+            <input id="blurStrength" type="range" min="1" max="10" value="6" class="mt-3 w-full accent-blue-600" />
+            <div class="mt-1 flex justify-between text-xs text-slate-500"><span>弱い</span><span>強い</span></div>
+          </div>
+
+          <button id="manualBlurBtn" class="rounded-xl bg-amber-500 px-5 py-3 font-bold text-white">
+            手動でぼかす場所を追加
+          </button>
+
           <button id="previewBlurBtn" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-40" disabled>
             ぼかし画像をプレビュー
           </button>
@@ -137,6 +150,9 @@
     const photoActionArea = document.getElementById("photoActionArea");
     const previewBlurBtn = document.getElementById("previewBlurBtn");
     const saveBlurBtn = document.getElementById("saveBlurBtn");
+    const manualBlurBtn = document.getElementById("manualBlurBtn");
+    const blurStrengthInput = document.getElementById("blurStrength");
+    const blurStrengthValue = document.getElementById("blurStrengthValue");
     const allBlurBtn = document.getElementById("allBlurBtn");
     const allClearBtn = document.getElementById("allClearBtn");
 
@@ -156,6 +172,8 @@
     let imageBase64 = "";
     let risks = [];
     let isBlurPreview = false;
+    let manualBlurMode = false;
+    let blurStrength = 6;
 
     selectBtn.addEventListener("click", () => fileInput.click());
 
@@ -186,6 +204,67 @@
     previewBlurBtn.addEventListener("click", previewBlurredImage);
     resetBtn.addEventListener("click", fullReset);
     saveBlurBtn.addEventListener("click", saveBlurredImage);
+
+    blurStrengthInput.addEventListener("input", () => {
+      blurStrength = Number(blurStrengthInput.value);
+      blurStrengthValue.textContent = String(blurStrength);
+      if (isBlurPreview) {
+        previewBlurredImage();
+        setStatus("ぼかしの強さを変更しました。もう一度プレビューボタンを押して確認してください。");
+      }
+    });
+
+    manualBlurBtn.addEventListener("click", () => {
+      if (isBlurPreview) {
+        setStatus("手動追加の前に『元の写真に戻す』を押してください。");
+        return;
+      }
+      manualBlurMode = !manualBlurMode;
+      manualBlurBtn.textContent = manualBlurMode
+        ? "写真上のぼかしたい場所をクリック"
+        : "手動でぼかす場所を追加";
+      manualBlurBtn.className = manualBlurMode
+        ? "rounded-xl bg-red-600 px-5 py-3 font-bold text-white"
+        : "rounded-xl bg-amber-500 px-5 py-3 font-bold text-white";
+      previewWrap.style.cursor = manualBlurMode ? "crosshair" : "";
+      setStatus(
+        manualBlurMode
+          ? "写真上のぼかしたい場所をクリックしてください。何か所でも追加できます。"
+          : "手動追加を終了しました。"
+      );
+    });
+
+    previewWrap.addEventListener("click", (event) => {
+      if (!manualBlurMode || isBlurPreview || !previewImage.src) return;
+
+      const rect = previewImage.getBoundingClientRect();
+      if (
+        event.clientX < rect.left || event.clientX > rect.right ||
+        event.clientY < rect.top || event.clientY > rect.bottom
+      ) return;
+
+      const naturalW = previewImage.naturalWidth;
+      const naturalH = previewImage.naturalHeight;
+      const x = ((event.clientX - rect.left) / rect.width) * naturalW;
+      const y = ((event.clientY - rect.top) / rect.height) * naturalH;
+      const size = Math.max(70, Math.min(naturalW, naturalH) * 0.13);
+
+      risks.push({
+        id: `manual-${Date.now()}-${risks.length}`,
+        label: "手動ぼかし",
+        memo: "クリックして追加したぼかし範囲です。",
+        color: "#f59e0b",
+        blur: true,
+        manual: true,
+        x: Math.max(0, x - size / 2),
+        y: Math.max(0, y - size / 2),
+        w: Math.min(size, naturalW),
+        h: Math.min(size, naturalH)
+      });
+
+      renderAll();
+      setStatus("手動のぼかし範囲を追加しました。続けてクリックできます。");
+    });
 
     allBlurBtn.addEventListener("click", () => {
       risks.forEach(r => r.blur = true);
@@ -444,16 +523,23 @@
               </div>
             </div>
 
-            <button
-              class="blur-toggle shrink-0 rounded-xl px-3 py-2 text-xs font-bold ${
-                risk.blur
-                  ? "bg-blue-600 text-white"
-                  : "border border-slate-300 bg-white text-slate-700"
-              }"
-              data-index="${index}"
-            >
-              ${risk.blur ? "ぼかす" : "ぼかさない"}
-            </button>
+            <div class="flex shrink-0 flex-col gap-2">
+              <button
+                class="blur-toggle rounded-xl px-3 py-2 text-xs font-bold ${
+                  risk.blur
+                    ? "bg-blue-600 text-white"
+                    : "border border-slate-300 bg-white text-slate-700"
+                }"
+                data-index="${index}"
+              >
+                ${risk.blur ? "ぼかす" : "ぼかさない"}
+              </button>
+              ${risk.manual ? `
+                <button class="manual-delete rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600" data-index="${index}">
+                  削除
+                </button>
+              ` : ""}
+            </div>
           </div>
         `;
 
@@ -465,6 +551,14 @@
           const index = Number(button.dataset.index);
           risks[index].blur = !risks[index].blur;
           renderAll();
+        });
+      });
+
+      document.querySelectorAll(".manual-delete").forEach((button) => {
+        button.addEventListener("click", () => {
+          risks.splice(Number(button.dataset.index), 1);
+          renderAll();
+          setStatus("手動で追加したぼかし範囲を削除しました。");
         });
       });
 
@@ -615,7 +709,7 @@
 
       if (safeW <= 0 || safeH <= 0) return;
 
-      const scale = 0.06;
+      const scale = Math.max(0.015, 0.14 - blurStrength * 0.0125);
       const smallW = Math.max(1, Math.floor(safeW * scale));
       const smallH = Math.max(1, Math.floor(safeH * scale));
 
@@ -648,6 +742,13 @@
       riskBadge.textContent = "未チェック";
       riskBadge.className = "rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-700";
       isBlurPreview = false;
+      manualBlurMode = false;
+      blurStrength = 6;
+      blurStrengthInput.value = "6";
+      blurStrengthValue.textContent = "6";
+      manualBlurBtn.textContent = "手動でぼかす場所を追加";
+      manualBlurBtn.className = "rounded-xl bg-amber-500 px-5 py-3 font-bold text-white";
+      previewWrap.style.cursor = "";
       overlay.classList.remove("hidden");
       previewBlurBtn.textContent = "ぼかし画像をプレビュー";
       previewBlurBtn.disabled = true;
